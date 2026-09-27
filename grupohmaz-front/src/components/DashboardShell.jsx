@@ -13,13 +13,22 @@ export default function DashboardShell() {
           </div>
           
           <nav className="flex flex-col gap-2">
-  <Link to="/pedidos" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
-    Pedidos
-  </Link>
-  <Link to="/analytics" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
-    Análises
-  </Link>
-</nav>
+            <Link to="/pedidos" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
+              Pedidos
+            </Link>
+            <Link to="/analytics" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
+              Análises
+            </Link>
+            
+            <div className="h-px bg-zinc-800 my-2 mx-4"></div>
+            
+            <Link to="/clientes" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
+              Clientes
+            </Link>
+            <Link to="/maquinas" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
+              Máquinas
+            </Link>
+          </nav>
         </div>
 
         {/* Perfil do Usuário na Base */}
@@ -37,18 +46,11 @@ export default function DashboardShell() {
       </aside>
 
       {/* Área Principal */}
-      <main className="flex-1 flex flex-col bg-zinc-900/50">
-        
-        {/* Cabeçalho Topo */}
-        <header className="h-16 border-b border-zinc-800 flex items-center px-8 bg-zinc-950">
-          <div className="text-sm text-zinc-500 w-full text-right">
-            Busca e Filtros...
-          </div>
-        </header>
-
-        {/* Conteúdo Dinâmico das Páginas */}
-        <div className="p-8 flex-1 overflow-auto">
-          <Outlet /> {/* É AQUI QUE AS PÁGINAS SÃO RENDERIZADAS */}
+      {/* Área Principal */}
+      <main className="flex-1 flex flex-col bg-[#0a0a0a]">
+        {/* Conteúdo Dinâmico das Páginas (O header foi removido) */}
+        <div className="p-8 flex-1 overflow-auto custom-scrollbar">
+          <Outlet />
         </div>
       </main>
     </div>

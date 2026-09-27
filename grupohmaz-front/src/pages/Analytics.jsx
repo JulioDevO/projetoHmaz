@@ -3,6 +3,7 @@ import {
   ClipboardList, Settings, AlertTriangle, CheckCircle2, ChevronDown, 
   FileText, FileSpreadsheet, Clock, Target, Eye, Users, TrendingUp, Award, ArrowRight
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Analytics() {
   const [abaAtiva, setAbaAtiva] = useState('operacional');
@@ -268,9 +269,12 @@ function AbaClientes() {
         </div>
         
         {/* Botão de Caminho para Todos os Clientes */}
-        <button className="mt-4 w-full py-2.5 bg-zinc-950 border border-zinc-800 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors flex items-center justify-center gap-2">
+        <Link 
+          to="/clientes" 
+          className="mt-4 w-full py-2.5 bg-zinc-950 border border-zinc-800 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors flex items-center justify-center gap-2"
+        >
           Acessar Diretório Completo de Clientes <ArrowRight size={16} />
-        </button>
+        </Link>
       </div>
     </div>
   );
