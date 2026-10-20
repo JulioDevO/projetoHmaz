@@ -28,6 +28,12 @@ export default function DashboardShell() {
             <Link to="/maquinas" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors">
               Máquinas
             </Link>
+            
+            <div className="h-px bg-zinc-800 my-2 mx-4"></div>
+            
+            <Link to="/configuracoes" className="px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-md transition-colors flex items-center justify-between">
+              Configurações
+            </Link>
           </nav>
         </div>
 

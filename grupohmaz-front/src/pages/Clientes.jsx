@@ -11,7 +11,7 @@ export default function Clientes() {
     <div className="flex flex-col h-full custom-scrollbar overflow-y-auto pb-6">
       <div className="flex justify-between items-center mb-6 px-2">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Diretório de Clientes</h2>
+          <h2 className="text-2xl font-semibold text-white">Clientes</h2>
           <p className="text-zinc-400 text-sm mt-1">Gestão de empresas e parceiros comerciais</p>
         </div>
         <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors flex items-center gap-2">

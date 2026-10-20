@@ -76,14 +76,23 @@ export default function OrderDrawer({ isOpen, onClose }) {
             <div className="grid grid-cols-2 gap-4">
                {/* Quantidade */}
                <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Quantidade</label>
-              <input 
-                type="number" 
-                min="1"
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                placeholder="Ex: 2 un."
-              />
-            </div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Quantidade</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                  placeholder="Ex: 2 un."
+                />
+              </div>
+              {/* Valor Total */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Valor Total (R$)</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                  placeholder="Ex: 45.000,00"
+                />
+              </div>
             </div>
              {/* Notas */}
              <div>

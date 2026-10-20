@@ -11,7 +11,7 @@ export default function Analytics() {
   return (
     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pb-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-white">Central de Análises</h2>
+        <h2 className="text-2xl font-semibold text-white">Análises</h2>
         <p className="text-zinc-400 text-sm mt-1">Inteligência de dados e histórico de produção</p>
       </div>
 
@@ -51,46 +51,48 @@ export default function Analytics() {
 }
 
 // ==========================================
-// COMPONENTE: ABA 1 (Visão Operacional Corrigida)
+// COMPONENTE: ABA 1 (Visão Operacional com Faturação)
 // ==========================================
 function VisaoOperacional() {
   const [ano, setAno] = useState('2026');
   
-  const mockMensal = [
-    { mes: 'Jan', valor: 30 }, { mes: 'Fev', valor: 45 }, { mes: 'Mar', valor: 40 },
-    { mes: 'Abr', valor: 60 }, { mes: 'Mai', valor: 55 }, { mes: 'Jun', valor: 75 },
-    { mes: 'Jul', valor: 85 }, { mes: 'Ago', valor: 90 }, { mes: 'Set', valor: 45 },
+  // Valores simulados de faturação em milhares (ex: 120 = R$ 120.000)
+  const mockFaturacao = [
+    { mes: 'Jan', valor: 120 }, { mes: 'Fev', valor: 145 }, { mes: 'Mar', valor: 90 },
+    { mes: 'Abr', valor: 160 }, { mes: 'Mai', valor: 155 }, { mes: 'Jun', valor: 175 },
+    { mes: 'Jul', valor: 185 }, { mes: 'Ago', valor: 210 }, { mes: 'Set', valor: 145 },
     { mes: 'Out', valor: 0 }, { mes: 'Nov', valor: 0 }, { mes: 'Dez', valor: 0 }
   ];
+  const maxValor = 210; // Valor máximo para calcular a altura das barras
 
   return (
     <div className="animate-in fade-in duration-500">
-      {/* KPIs */}
+      {/* KPIs Financeiros e Operacionais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-zinc-400 text-sm font-medium">Total Ativos</p><h3 className="text-3xl font-bold text-white mt-1">12</h3></div>
-            <div className="p-2 bg-zinc-800 rounded-lg text-zinc-300"><ClipboardList size={20} /></div>
+            <div><p className="text-zinc-400 text-sm font-medium">Faturação Mensal</p><h3 className="text-2xl font-bold text-white mt-1">R$ 210k</h3></div>
+            <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500"><TrendingUp size={20} /></div>
           </div>
         </div>
 
         <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-zinc-400 text-sm font-medium">Em Produção</p><h3 className="text-3xl font-bold text-white mt-1">4</h3></div>
-            <div className="p-2 bg-blue-900/20 border border-blue-900/50 rounded-lg text-blue-500"><Settings size={20} /></div>
+            <div><p className="text-zinc-400 text-sm font-medium">Ticket Médio</p><h3 className="text-2xl font-bold text-white mt-1">R$ 45k</h3></div>
+            <div className="p-2 bg-blue-900/20 border border-blue-900/50 rounded-lg text-blue-500"><ClipboardList size={20} /></div>
           </div>
         </div>
 
-        <div className="bg-zinc-900/50 p-5 rounded-xl border border-red-900/50 flex flex-col justify-between bg-gradient-to-br from-red-950/20 to-transparent">
+        <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-red-400 text-sm font-medium">Em Atraso</p><h3 className="text-3xl font-bold text-red-400 mt-1">1</h3></div>
-            <div className="p-2 bg-red-900/30 border border-red-800/50 rounded-lg text-red-400"><AlertTriangle size={20} /></div>
+            <div><p className="text-zinc-400 text-sm font-medium">Em Produção</p><h3 className="text-2xl font-bold text-white mt-1">4</h3></div>
+            <div className="p-2 bg-zinc-800 rounded-lg text-zinc-300"><Settings size={20} /></div>
           </div>
         </div>
 
         <div className="bg-zinc-900/50 p-5 rounded-xl border border-emerald-900/50 flex flex-col justify-between bg-gradient-to-br from-emerald-950/20 to-transparent">
           <div className="flex justify-between items-start">
-            <div><p className="text-emerald-400 text-sm font-medium">Concluídos</p><h3 className="text-3xl font-bold text-emerald-400 mt-1">3</h3></div>
+            <div><p className="text-emerald-400 text-sm font-medium">Concluídos</p><h3 className="text-2xl font-bold text-emerald-400 mt-1">3</h3></div>
             <div className="p-2 bg-emerald-900/30 border border-emerald-800/50 rounded-lg text-emerald-400"><CheckCircle2 size={20} /></div>
           </div>
         </div>
@@ -98,47 +100,43 @@ function VisaoOperacional() {
       
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Gráfico Donut com Legenda Restaurada */}
         <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 lg:col-span-1 flex flex-col items-center">
           <div className="w-full mb-6">
             <h4 className="text-zinc-100 font-medium">Status dos Pedidos</h4>
-            <p className="text-xs text-zinc-500">Proporção dos 12 pedidos ativos</p>
+            <p className="text-xs text-zinc-500">Proporção dos pedidos ativos</p>
           </div>
-          
           <div className="relative w-40 h-40 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'conic-gradient(#52525b 0% 42%, #3b82f6 42% 75%, #10b981 75% 100%)' }}>
             <div className="w-24 h-24 bg-[#0a0a0a] rounded-full flex flex-col items-center justify-center shadow-inner">
               <span className="text-2xl font-bold text-white">12</span>
               <span className="text-xs text-zinc-400">Total</span>
             </div>
           </div>
-          
-          {/* A Legenda */}
           <div className="flex flex-col gap-3 mt-8 text-sm text-zinc-300 w-full">
-             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-zinc-500 shadow-[0_0_8px_rgba(82,82,91,0.5)]"></span>A Fazer</div><span className="font-semibold text-white">5 <span className="text-zinc-500 text-xs font-normal ml-1">(42%)</span></span></div>
-             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>Em Produção</div><span className="font-semibold text-white">4 <span className="text-zinc-500 text-xs font-normal ml-1">(33%)</span></span></div>
-             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>Concluídos</div><span className="font-semibold text-white">3 <span className="text-zinc-500 text-xs font-normal ml-1">(25%)</span></span></div>
+             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-zinc-500"></span>A Fazer</div><span className="font-semibold text-white">5</span></div>
+             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500"></span>Em Produção</div><span className="font-semibold text-white">4</span></div>
+             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500"></span>Concluídos</div><span className="font-semibold text-white">3</span></div>
           </div>
         </div>
         
-        {/* Gráfico de Barras Corrigido (colunas mais finas) */}
+        {/* Gráfico de Faturação */}
         <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 lg:col-span-2 flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h4 className="text-zinc-100 font-medium">Volume de Produção</h4>
-              <p className="text-xs text-zinc-500">Histórico de produção por mês</p>
+              <h4 className="text-zinc-100 font-medium">Histórico de Faturação</h4>
+              <p className="text-xs text-zinc-500">Receita gerada por mês (em milhares de Reais)</p>
             </div>
             <select className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-sm rounded-md px-2 py-1"><option>2026</option></select>
           </div>
           <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 h-56 px-1 border-b border-zinc-800/50 pb-2 mt-4">
-            {mockMensal.map((item, i) => (
+            {mockFaturacao.map((item, i) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 h-full group">
                 <div 
-                  className={`w-full max-w-[2.5rem] rounded-t-md transition-all duration-500 relative flex justify-center ${item.valor === 0 ? 'bg-transparent' : 'bg-blue-900/40 group-hover:bg-blue-600'}`} 
-                  style={{ height: `${item.valor === 0 ? 1 : item.valor}%` }}
+                  className={`w-full max-w-[2.5rem] rounded-t-md transition-all duration-500 relative flex justify-center ${item.valor === 0 ? 'bg-transparent' : 'bg-emerald-900/60 group-hover:bg-emerald-600'}`} 
+                  style={{ height: `${item.valor === 0 ? 1 : (item.valor / maxValor) * 100}%` }}
                 >
                   {item.valor > 0 && (
-                    <span className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-zinc-800 text-white text-xs px-2 py-1 rounded transition-opacity z-10">
-                      {item.valor}
+                    <span className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-zinc-800 text-white text-xs px-2 py-1 rounded transition-opacity z-10 whitespace-nowrap">
+                      R$ {item.valor}k
                     </span>
                   )}
                 </div>
@@ -152,23 +150,31 @@ function VisaoOperacional() {
   );
 }
 
+
 // ==========================================
-// COMPONENTE: ABA 2 (Relatórios Original Restaurado)
+// COMPONENTE: ABA 2 (Histórico e Exportação com Valores)
 // ==========================================
 function Historico() {
   const relatoriosMock = [
-    { id: 'PED-1046', cliente: 'Tubos & Perfis do Sul', maquina: 'Calandra de 3 Rolos 2000mm', emissao: '10/07/2026', conclusao: '10/08/2026', status: 'Concluído' },
-    { id: 'PED-1047', cliente: 'Metalúrgica São Jorge', maquina: 'Corte a Laser Tubo 20-220mm', emissao: '28/06/2026', conclusao: '07/08/2026', status: 'Concluído' },
-    { id: 'PED-1051', cliente: 'Indústria Ferro & Aço Ltda.', maquina: 'Calandra de 4 Rolos 3000mm', emissao: '05/07/2026', conclusao: '06/08/2026', status: 'Concluído' },
+    { id: 'PED-1046', cliente: 'Tubos & Perfis do Sul', maquina: 'Calandra de 3 Rolos 2000mm', emissao: '10/07/2026', conclusao: '10/08/2026', valor: 42000, status: 'Concluído' },
+    { id: 'PED-1047', cliente: 'Metalúrgica São Jorge', maquina: 'Corte a Laser Tubo 20-220mm', emissao: '28/06/2026', conclusao: '07/08/2026', valor: 190000, status: 'Concluído' },
+    { id: 'PED-1051', cliente: 'Indústria Ferro & Aço Ltda.', maquina: 'Calandra de 4 Rolos 3000mm', emissao: '05/07/2026', conclusao: '06/08/2026', valor: 85000, status: 'Concluído' },
   ];
+
+  // Cálculo automático do total do período selecionado
+  const totalPeriodo = relatoriosMock.reduce((acc, item) => acc + item.valor, 0);
+
+  const formatarMoeda = (valor) => {
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
 
   return (
     <div className="animate-in fade-in duration-500 flex-1 flex flex-col">
       {/* Barra de Filtros e Exportação */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#121214] p-4 rounded-xl border border-zinc-800 mb-6">
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-zinc-300">Período:</label>
-          <select className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-blue-500 cursor-pointer">
+          <select className="bg-[#1e1e20] border border-zinc-700 text-zinc-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-blue-500 cursor-pointer">
             <option value="2026-08">2026-08 (Agosto)</option>
             <option value="2026-07">2026-07 (Julho)</option>
           </select>
@@ -184,42 +190,54 @@ function Historico() {
         </div>
       </div>
 
-      {/* Tabela de Relatórios */}
-      <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden flex-1">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-zinc-400 uppercase bg-zinc-950/50 border-b border-zinc-800">
+      {/* Tabela de Histórico Financeiro e de Produção */}
+      <div className="bg-[#121214] rounded-xl border border-zinc-800 overflow-hidden flex flex-col">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm">
+            <thead className="text-xs text-zinc-400 uppercase border-b border-zinc-800 bg-zinc-950/40">
               <tr>
-                <th className="px-6 py-4 font-medium">ID</th>
-                <th className="px-6 py-4 font-medium">Cliente</th>
-                <th className="px-6 py-4 font-medium">Máquina</th>
-                <th className="px-6 py-4 font-medium">Emissão</th>
-                <th className="px-6 py-4 font-medium">Conclusão</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-center">Ação</th>
+                <th className="px-6 py-4 font-medium text-left">ID</th>
+                <th className="px-6 py-4 font-medium text-left">Cliente</th>
+                <th className="px-6 py-4 font-medium text-left">Máquina</th>
+                <th className="px-6 py-4 font-medium text-center">Emissão</th>
+                <th className="px-6 py-4 font-medium text-center">Conclusão</th>
+                <th className="px-6 py-4 font-medium text-center">Valor</th>
+                <th className="px-6 py-4 font-medium text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800 text-zinc-300">
-              {relatoriosMock.map((item, idx) => (
-                <tr key={idx} className="hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-6 py-4 font-medium text-zinc-100">{item.id}</td>
-                  <td className="px-6 py-4">{item.cliente}</td>
-                  <td className="px-6 py-4">{item.maquina}</td>
-                  <td className="px-6 py-4">{item.emissao}</td>
-                  <td className="px-6 py-4">{item.conclusao}</td>
-                  <td className="px-6 py-4">
-                    <span className="bg-emerald-950/50 text-emerald-400 border border-emerald-900/50 px-2 py-1 rounded-full text-xs font-medium flex items-center justify-center w-max">
-                      {item.status}
-                    </span>
+            <tbody className="divide-y divide-zinc-800/50 text-zinc-300">
+              {relatoriosMock.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-800/20 transition-colors">
+                  <td className="px-6 py-4 font-medium text-zinc-100 text-left">{item.id}</td>
+                  <td className="px-6 py-4 text-left font-medium text-zinc-200">{item.cliente}</td>
+                  <td className="px-6 py-4 text-left text-zinc-400">{item.maquina}</td>
+                  <td className="px-6 py-4 text-center text-zinc-400">{item.emissao}</td>
+                  <td className="px-6 py-4 text-center text-zinc-400">{item.conclusao}</td>
+                  <td className="px-6 py-4 text-center font-semibold text-emerald-400">
+                    {formatarMoeda(item.valor)}
                   </td>
-                  <td className="px-6 py-4 flex justify-center">
-                    <button className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-md transition-colors" title="Visualizar Detalhes">
-                      <Eye size={18} />
-                    </button>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-center">
+                      <span className="text-emerald-400 border border-emerald-900/50 bg-emerald-950/30 px-3 py-1 rounded-full text-xs font-medium flex items-center justify-center w-max">
+                        {item.status}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
+            {/* Rodapé com Somatório do Mês */}
+            <tfoot className="border-t border-zinc-800 bg-zinc-950/60">
+              <tr>
+                <td colSpan="5" className="px-6 py-4 text-right font-medium text-zinc-400">
+                  Total Faturado no Período ({relatoriosMock.length} pedidos):
+                </td>
+                <td className="px-6 py-4 text-center font-bold text-emerald-400 text-base">
+                  {formatarMoeda(totalPeriodo)}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>

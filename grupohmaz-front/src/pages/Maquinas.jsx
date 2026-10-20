@@ -26,7 +26,7 @@ export default function Maquinas() {
     <div className="flex flex-col h-full custom-scrollbar overflow-y-auto pb-6">
       <div className="flex justify-between items-center mb-6 px-2">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Catálogo de Máquinas</h2>
+          <h2 className="text-2xl font-semibold text-white">Máquinas</h2>
           <p className="text-zinc-400 text-sm mt-1">Registo de equipamentos e portefólio de fabrico</p>
         </div>
         <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors flex items-center gap-2">
@@ -90,7 +90,7 @@ export default function Maquinas() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table>  
         </div>
       </div>
     </div>
