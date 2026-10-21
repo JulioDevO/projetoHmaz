@@ -1,28 +1,68 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import DashboardShell from './components/DashboardShell';
-import Pedidos from './pages/Pedidos';
-import Analytics from './pages/Analytics';
-import Clientes from './pages/Clientes';
-import Maquinas from './pages/Maquinas';
-import Configuracoes from './pages/Configuracoes'; // <-- Importação adicionada
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
+import Analytics from './pages/Analytics';
+import Pedidos from './pages/Pedidos';
+import Configuracoes from './pages/Configuracoes';
+
+function ProtectedRoute({ children, roleRequerida }) {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (roleRequerida && user.role !== roleRequerida) {
+    return <Navigate to="/pedidos" replace />;
+  }
+
+  return children;
+}
+
+function RootRoute() {
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to={user.role === 'admin' ? '/analytics' : '/pedidos'} replace />;
+}
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        {/* Todas as páginas com o Menu Lateral ficam dentro do DashboardShell */}
-        <Route path="/" element={<DashboardShell />}>
-          <Route index element={<Navigate to="/login" replace />} />
-          <Route path="pedidos" element={<Pedidos />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="clientes" element={<Clientes />} />
-          <Route path="maquinas" element={<Maquinas />} />
-          <Route path="configuracoes" element={<Configuracoes />} /> {/* <-- Rota no lugar correto */}
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/login" element={<Login />} />
+          
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute roleRequerida="admin">
+                <Analytics />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/pedidos" 
+            element={
+              <ProtectedRoute>
+                <Pedidos />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/configuracoes" 
+            element={
+              <ProtectedRoute roleRequerida="admin">
+                <Configuracoes />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
