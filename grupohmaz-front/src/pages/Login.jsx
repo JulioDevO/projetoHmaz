@@ -1,13 +1,36 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Hexagon } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Hexagon, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login, user } = useAuth();
+  
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState('');
 
- const handleLogin = (e) => {
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'admin' ? '/analytics' : '/pedidos');
+    }
+  }, [user, navigate]);
+
+  const handleLogin = (e) => {
     e.preventDefault();
-    navigate('/analytics'); 
+    const sucesso = login(email, senha);
+    if (sucesso) {
+      if (email.includes('admin')) {
+        navigate('/analytics');
+      } else {
+        navigate('/pedidos');
+      }
+    } else {
+      setErro('Credenciais inválidas. Tenta admin@hmaz.com / admin123');
+    }
   };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -15,11 +38,19 @@ export default function Login() {
           <Hexagon size={48} />
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-white">Grupo Hmaz</h2>
-        <p className="mt-2 text-center text-sm text-zinc-400">Acesse o sistema de gestão ERP</p>
+        <p className="mt-2 text-center text-sm text-zinc-400">Acede ao sistema de gestão ERP</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-zinc-950 py-8 px-4 shadow sm:rounded-xl border border-zinc-800 sm:px-10">
+          
+          {erro && (
+            <div className="mb-6 bg-red-950/30 border border-red-900/50 rounded-md p-3 flex items-center gap-2 text-red-400 text-sm">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{erro}</span>
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
               <label className="block text-sm font-medium text-zinc-300">E-mail Corporativo</label>
@@ -30,8 +61,10 @@ export default function Login() {
                 <input 
                   type="email" 
                   required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-md pl-10 p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" 
-                  placeholder="admin@grupohmaz.com" 
+                  placeholder="admin@hmaz.com" 
                 />
               </div>
             </div>
@@ -45,6 +78,8 @@ export default function Login() {
                 <input 
                   type="password" 
                   required 
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-md pl-10 p-2.5 text-sm text-white focus:outline-none focus:border-blue-500" 
                   placeholder="••••••••" 
                 />
