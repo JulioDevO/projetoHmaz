@@ -1,6 +1,8 @@
-import { Plus, MonitorPlay, MoreHorizontal, Package, Calendar, AlertCircle, GripVertical, Minimize2, Link2, Check } from 'lucide-react';
+import { Plus, MonitorPlay, MoreHorizontal, Package, Calendar, AlertCircle, GripVertical, Minimize2, Link2, Check, LayoutDashboard, Kanban, Settings, LogOut, Camera, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import OrderDrawer from '../components/OrderDrawer';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const colunasIniciais = [
   { id: 'todo', titulo: 'A Fazer', cor: 'bg-zinc-500', borda: 'border-t-zinc-500', pedidos: [
@@ -26,19 +28,44 @@ export default function Pedidos() {
   const [colunas, setColunas] = useState(colunasIniciais);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  // Estados para controle preciso de coluna e posição (índice)
   const [dragInfo, setDragInfo] = useState(null);
   const [dropTarget, setDropTarget] = useState({ colId: null, index: null });
   
   const [modoTV, setModoTV] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [fotoPerfil, setFotoPerfil] = useState(null);
+  const [sidebarRecolhida, setSidebarRecolhida] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleUploadFoto = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setFotoPerfil(imageUrl);
+    }
+  };
+
+  const getIniciais = (nome) => {
+    if (!nome) return 'US';
+    const partes = nome.split(' ');
+    if (partes.length >= 2) {
+      return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+    }
+    return nome.substring(0, 2).toUpperCase();
+  };
+
   const handleDragStart = (e, pedido, colId, index) => {
     setDragInfo({ pedido, sourceColId: colId, sourceIndex: index });
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  // Calcula se o mouse está na metade superior ou inferior do cartão alvo
   const handleDragOverCard = (e, colId, index) => {
     e.preventDefault();
     e.stopPropagation();
@@ -51,7 +78,6 @@ export default function Pedidos() {
     }
   };
 
-  // Quando arrasta para o espaço vazio da coluna, joga para o final
   const handleDragOverColumn = (e, colId, totalPedidos) => {
     e.preventDefault();
     if (dropTarget.colId !== colId || dropTarget.index === null) {
@@ -77,15 +103,12 @@ export default function Pedidos() {
       const colOrigem = novasColunas.find((c) => c.id === sourceColId);
       const colDestino = novasColunas.find((c) => c.id === targetColId);
 
-      // Remove da posição original
       colOrigem.pedidos.splice(sourceIndex, 1);
 
-      // Ajusta o índice caso esteja movendo para baixo dentro da mesma coluna
       if (sourceColId === targetColId && sourceIndex < targetIndex) {
         targetIndex -= 1;
       }
 
-      // Insere na exata posição escolhida
       colDestino.pedidos.splice(targetIndex, 0, pedido);
 
       return novasColunas;
@@ -107,162 +130,255 @@ export default function Pedidos() {
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden animate-in fade-in duration-500 ${modoTV ? 'fixed inset-0 z-50 bg-[#0a0a0a] p-6' : ''}`}>
+    <div className={`flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 transition-colors duration-300 ${modoTV ? 'fixed inset-0 z-50 bg-[#0a0a0a] p-6' : ''}`}>
       
-      {/* Cabeçalho */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-5 shrink-0">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-semibold text-white">Pedidos</h2>
-            {modoTV && (
-              <span className="bg-blue-950/80 text-blue-400 border border-blue-800/60 text-xs px-2.5 py-0.5 rounded-full font-medium animate-pulse">
-                Exibição Linha de Produção (TV)
-              </span>
-            )}
-          </div>
-          <p className="text-zinc-400 text-sm mt-0.5">Arraste os cartões para alterar a etapa ou definir a ordem de prioridade</p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button 
-            onClick={copiarLinkTV}
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-800 flex items-center gap-1.5"
-            title="Copiar link público para a TV da fábrica"
-          >
-            {copiado ? <Check size={15} className="text-emerald-400" /> : <Link2 size={15} />}
-            {copiado ? 'Link Copiado!' : 'Copiar Link TV'}
-          </button>
-
-          <button 
-            onClick={() => setModoTV(!modoTV)}
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-3.5 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-800 flex items-center gap-1.5"
-          >
-            {modoTV ? <Minimize2 size={15} /> : <MonitorPlay size={15} />}
-            {modoTV ? 'Sair do Modo TV' : 'Modo TV'}
-          </button>
-
-          {!modoTV && (
-            <button 
-              onClick={() => setIsDrawerOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              <Plus size={16} /> Novo Pedido
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Grid das 5 Colunas */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3.5 min-h-0 overflow-y-auto xl:overflow-hidden pb-2">
-        {colunas.map((coluna) => (
-          <div 
-            key={coluna.id} 
-            onDragOver={(e) => handleDragOverColumn(e, coluna.id, coluna.pedidos.length)}
-            onDrop={(e) => handleDrop(e, coluna.id)}
-            className={`bg-[#121214] rounded-xl border border-zinc-800/80 border-t-2 ${coluna.borda} p-3 flex flex-col h-full min-h-[280px] transition-colors ${
-              dropTarget.colId === coluna.id ? 'bg-zinc-900/50 border-zinc-700' : ''
-            }`}
-          >
-            {/* Cabeçalho da Coluna */}
-            <div className="flex items-center justify-between mb-3 px-1 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${coluna.cor}`}></span>
-                <h3 className="font-medium text-zinc-200 text-sm">{coluna.titulo}</h3>
-                <span className="bg-zinc-800/80 text-zinc-400 text-[11px] px-2 py-0.5 rounded-full font-medium">
-                  {coluna.pedidos.length}
-                </span>
+      {!modoTV && (
+        <aside className={`bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between p-4 flex-shrink-0 transition-all duration-300 ${sidebarRecolhida ? 'w-20' : 'w-64'}`}>
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold text-sm flex-shrink-0">H</div>
+                {!sidebarRecolhida && <span className="font-semibold text-base tracking-tight text-zinc-900 dark:text-white truncate">Grupo Hmaz</span>}
               </div>
-              <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
-                <MoreHorizontal size={16} />
+              <button 
+                onClick={() => setSidebarRecolhida(!sidebarRecolhida)}
+                className="p-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title={sidebarRecolhida ? "Expandir barra" : "Recolher barra"}
+              >
+                {sidebarRecolhida ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
               </button>
             </div>
 
-            {/* Área dos Cartões */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2.5 pr-1">
-              {coluna.pedidos.map((pedido, index) => {
-                const isBeingDragged = dragInfo?.pedido.id === pedido.id;
-                const showIndicatorTop = dropTarget.colId === coluna.id && dropTarget.index === index;
-
-                return (
-                  <div key={pedido.id} className="flex flex-col">
-                    {/* Linha azul indicadora de posição (Topo do cartão) */}
-                    {showIndicatorTop && (
-                      <div className="h-1 bg-blue-500 rounded-full mb-2 transition-all shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                    )}
-
-                    <div 
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, pedido, coluna.id, index)}
-                      onDragOver={(e) => handleDragOverCard(e, coluna.id, index)}
-                      onDragEnd={handleDragEnd}
-                      className={`bg-[#18181b] border border-zinc-800/90 p-3.5 rounded-lg cursor-grab active:cursor-grabbing hover:border-zinc-600 transition-all shadow-sm group ${
-                        isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed border-zinc-600' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2 mb-1.5">
-                        <div className="flex items-start gap-1.5 min-w-0">
-                          <GripVertical size={14} className="text-zinc-600 group-hover:text-zinc-400 mt-0.5 shrink-0 transition-colors" />
-                          <div className="min-w-0">
-                            <h4 className="font-medium text-zinc-100 text-xs leading-snug truncate" title={pedido.cliente}>
-                              {pedido.cliente}
-                            </h4>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">{pedido.id}</p>
-                          </div>
-                        </div>
-                        <span className="bg-zinc-800/70 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-700/50 shrink-0">
-                          {pedido.tag}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-zinc-300 mb-3 pl-5 line-clamp-1" title={pedido.maquina}>
-                        {pedido.maquina}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-3 pl-5">
-                        <span className="flex items-center gap-1">
-                          <Package size={13} className="text-zinc-500" /> {pedido.qtd} un.
-                        </span>
-                        <span className="font-medium text-emerald-400/90">{pedido.valor}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center text-[11px] border-t border-zinc-800/80 pt-2.5 text-zinc-400">
-                        <span className="flex items-center gap-1">
-                          <Calendar size={12} className="text-zinc-500" /> {pedido.prazo}
-                        </span>
-                        {pedido.dias && (
-                          <span className="text-red-400 font-semibold bg-red-950/40 px-1.5 py-0.5 rounded text-[10px]">
-                            +{pedido.dias}
-                          </span>
-                        )}
-                      </div>
-
-                      {pedido.alerta && (
-                        <div className="mt-2.5 bg-red-950/30 border border-red-900/50 rounded p-1.5 flex items-center gap-1.5 text-red-400 text-[11px]">
-                          <AlertCircle size={13} className="shrink-0" />
-                          <span className="truncate">{pedido.alerta}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Linha azul indicadora quando solta no fim da lista */}
-              {dropTarget.colId === coluna.id && dropTarget.index === coluna.pedidos.length && coluna.pedidos.length > 0 && (
-                <div className="h-1 bg-blue-500 rounded-full mt-0.5 transition-all shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+            <nav className="flex flex-col gap-1">
+              <button 
+                onClick={() => navigate('/analytics')} 
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors text-left ${sidebarRecolhida ? 'justify-center px-2' : ''}`}
+                title="Analytics & Faturamento"
+              >
+                <LayoutDashboard size={18} className="flex-shrink-0" />
+                {!sidebarRecolhida && <span className="truncate">Analytics & Faturamento</span>}
+              </button>
+              <button 
+                onClick={() => navigate('/pedidos')} 
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 transition-colors text-left ${sidebarRecolhida ? 'justify-center px-2' : ''}`}
+                title="Pedidos (Kanban)"
+              >
+                <Kanban size={18} className="flex-shrink-0" />
+                {!sidebarRecolhida && <span className="truncate">Pedidos (Kanban)</span>}
+              </button>
+              {user?.role === 'admin' && (
+                <button 
+                  onClick={() => navigate('/configuracoes')} 
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors text-left ${sidebarRecolhida ? 'justify-center px-2' : ''}`}
+                  title="Configurações"
+                >
+                  <Settings size={18} className="flex-shrink-0" />
+                  {!sidebarRecolhida && <span className="truncate">Configurações</span>}
+                </button>
               )}
+            </nav>
+          </div>
 
-              {coluna.pedidos.length === 0 && (
-                <div className="flex-1 border border-dashed border-zinc-800/70 rounded-lg flex items-center justify-center p-4 text-xs text-zinc-600 text-center min-h-[100px]">
-                  Arraste um pedido para cá
-                </div>
+          {!sidebarRecolhida && (
+            <div className="text-xs text-zinc-400 dark:text-zinc-600 px-2 truncate">
+              ERP Gestão v1.2
+            </div>
+          )}
+        </aside>
+      )}
+
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto custom-scrollbar p-6">
+        
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-5 shrink-0">
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white">Pedidos</h2>
+              {modoTV && (
+                <span className="bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-800/60 text-xs px-2.5 py-0.5 rounded-full font-medium animate-pulse">
+                  Exibição Linha de Produção (TV)
+                </span>
               )}
             </div>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">Arraste os cartões para alterar a etapa ou definir a ordem de prioridade</p>
           </div>
-        ))}
-      </div>
 
-      <OrderDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={copiarLinkTV}
+              className="bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-300 dark:border-zinc-800 flex items-center gap-1.5 shadow-sm"
+              title="Copiar link público para a TV da fábrica"
+            >
+              {copiado ? <Check size={15} className="text-emerald-500" /> : <Link2 size={15} />}
+              {copiado ? 'Link Copiado!' : 'Copiar Link TV'}
+            </button>
+
+            <button 
+              onClick={() => setModoTV(!modoTV)}
+              className="bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 px-3.5 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-300 dark:border-zinc-800 flex items-center gap-1.5 shadow-sm"
+            >
+              {modoTV ? <Minimize2 size={15} /> : <MonitorPlay size={15} />}
+              {modoTV ? 'Sair do Modo TV' : 'Modo TV'}
+            </button>
+
+            {!modoTV && (
+              <button 
+                onClick={() => setIsDrawerOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus size={16} /> Novo Pedido
+              </button>
+            )}
+
+            {user && !modoTV && (
+              <div className="flex items-center gap-3.5 bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800/80 px-3.5 py-2 rounded-lg shadow-sm ml-2">
+                <div className="relative group cursor-pointer" title="Clique para alterar a foto de perfil">
+                  <label htmlFor="input-foto-perfil" className="cursor-pointer block">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-medium text-xs">
+                      {fotoPerfil ? (
+                        <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{getIniciais(user.nome)}</span>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                      <Camera size={14} />
+                    </div>
+                  </label>
+                  <input 
+                    id="input-foto-perfil" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleUploadFoto}
+                  />
+                </div>
+
+                <div className="text-left leading-tight">
+                  <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200">{user.nome}</p>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 capitalize">{user.role === 'admin' ? 'Administrador' : 'Equipa'}</p>
+                </div>
+
+                <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
+
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 px-2.5 py-1.5 rounded-md transition-colors"
+                  title="Encerrar sessão"
+                >
+                  <LogOut size={15} /> Sair
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3.5 min-h-0 overflow-y-auto xl:overflow-hidden pb-2">
+          {colunas.map((coluna) => (
+            <div 
+              key={coluna.id} 
+              onDragOver={(e) => handleDragOverColumn(e, coluna.id, coluna.pedidos.length)}
+              onDrop={(e) => handleDrop(e, coluna.id)}
+              className={`bg-white dark:bg-[#121214] rounded-xl border border-zinc-200 dark:border-zinc-800/80 border-t-2 ${coluna.borda} p-3 flex flex-col h-full min-h-[280px] transition-colors shadow-sm ${
+                dropTarget.colId === coluna.id ? 'bg-zinc-100 dark:bg-zinc-900/50 border-zinc-400 dark:border-zinc-700' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3 px-1 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${coluna.cor}`}></span>
+                  <h3 className="font-medium text-zinc-800 dark:text-zinc-200 text-sm">{coluna.titulo}</h3>
+                  <span className="bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 text-[11px] px-2 py-0.5 rounded-full font-medium">
+                    {coluna.pedidos.length}
+                  </span>
+                </div>
+                <button className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                  <MoreHorizontal size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2.5 pr-1">
+                {coluna.pedidos.map((pedido, index) => {
+                  const isBeingDragged = dragInfo?.pedido.id === pedido.id;
+                  const showIndicatorTop = dropTarget.colId === coluna.id && dropTarget.index === index;
+
+                  return (
+                    <div key={pedido.id} className="flex flex-col">
+                      {showIndicatorTop && (
+                        <div className="h-1 bg-blue-500 rounded-full mb-2 transition-all shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                      )}
+
+                      <div 
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, pedido, coluna.id, index)}
+                        onDragOver={(e) => handleDragOverCard(e, coluna.id, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/90 p-3.5 rounded-lg cursor-grab active:cursor-grabbing hover:border-zinc-400 dark:hover:border-zinc-600 transition-all shadow-sm group ${
+                          isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed border-zinc-500' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <div className="flex items-start gap-1.5 min-w-0">
+                            <GripVertical size={14} className="text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-600 dark:group-hover:text-zinc-400 mt-0.5 shrink-0 transition-colors" />
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-zinc-900 dark:text-zinc-100 text-xs leading-snug truncate" title={pedido.cliente}>
+                                {pedido.cliente}
+                              </h4>
+                              <p className="text-[11px] text-zinc-500 mt-0.5">{pedido.id}</p>
+                            </div>
+                          </div>
+                          <span className="bg-zinc-200/70 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700/50 shrink-0">
+                            {pedido.tag}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-zinc-600 dark:text-zinc-300 mb-3 pl-5 line-clamp-1" title={pedido.maquina}>
+                          {pedido.maquina}
+                        </p>
+
+                        <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mb-3 pl-5">
+                          <span className="flex items-center gap-1">
+                            <Package size={13} className="text-zinc-400 dark:text-zinc-500" /> {pedido.qtd} un.
+                          </span>
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400/90">{pedido.valor}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[11px] border-t border-zinc-200 dark:border-zinc-800/80 pt-2.5 text-zinc-500 dark:text-zinc-400">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} className="text-zinc-400 dark:text-zinc-500" /> {pedido.prazo}
+                          </span>
+                          {pedido.dias && (
+                            <span className="text-red-600 dark:text-red-400 font-semibold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded text-[10px]">
+                              +{pedido.dias}
+                            </span>
+                          )}
+                        </div>
+
+                        {pedido.alerta && (
+                          <div className="mt-2.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded p-1.5 flex items-center gap-1.5 text-red-600 dark:text-red-400 text-[11px]">
+                            <AlertCircle size={13} className="shrink-0" />
+                            <span className="truncate">{pedido.alerta}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {dropTarget.colId === coluna.id && dropTarget.index === coluna.pedidos.length && coluna.pedidos.length > 0 && (
+                  <div className="h-1 bg-blue-500 rounded-full mt-0.5 transition-all shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                )}
+
+                {coluna.pedidos.length === 0 && (
+                  <div className="flex-1 border border-dashed border-zinc-300 dark:border-zinc-800/70 rounded-lg flex items-center justify-center p-4 text-xs text-zinc-400 dark:text-zinc-600 text-center min-h-[100px]">
+                    Arraste um pedido para cá
+                  </div>
+                )}
+              </div>a
+            </div>
+          ))}
+        </div>
+
+        <OrderDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      </div>
     </div>
   );
 }
