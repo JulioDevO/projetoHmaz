@@ -1,8 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
+import DashboardShell from './components/DashboardShell';
 import Analytics from './pages/Analytics';
 import Pedidos from './pages/Pedidos';
+import Clientes from './pages/Clientes';
+import Maquinas from './pages/Maquinas';
 import Configuracoes from './pages/Configuracoes';
 
 function ProtectedRoute({ children, roleRequerida }) {
@@ -35,32 +38,13 @@ export default function App() {
           <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<Login />} />
           
-          <Route 
-            path="/analytics" 
-            element={
-              <ProtectedRoute roleRequerida="admin">
-                <Analytics />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/pedidos" 
-            element={
-              <ProtectedRoute>
-                <Pedidos />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/configuracoes" 
-            element={
-              <ProtectedRoute roleRequerida="admin">
-                <Configuracoes />
-              </ProtectedRoute>
-            } 
-          />
+          <Route element={<ProtectedRoute><DashboardShell /></ProtectedRoute>}>
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/pedidos" element={<Pedidos />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/maquinas" element={<Maquinas />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
+          </Route>
         </Routes>
       </Router>
     </AuthProvider>

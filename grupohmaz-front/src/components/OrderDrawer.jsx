@@ -1,7 +1,8 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
-export default function OrderDrawer({ isOpen, onClose }) {
+export default function OrderDrawer({ isOpen, onClose, onPedidoCriado }) {
   const [cliente, setCliente] = useState('');
   const [maquina, setMaquina] = useState('');
   const [dataEmissao, setDataEmissao] = useState('2026-09-27');
@@ -9,12 +10,66 @@ export default function OrderDrawer({ isOpen, onClose }) {
   const [quantidade, setQuantidade] = useState('');
   const [valorTotal, setValorTotal] = useState('');
   const [notas, setNotas] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Estados para armazenar as listas dinâmicas do Supabase
+  const [listaClientes, setListaClientes] = useState([]);
+  const [listaMaquinas, setListaMaquinas] = useState([]);
+
+  // Carregar clientes e produtos reais do Supabase ao abrir o drawer
+  useEffect(() => {
+    async function carregarDadosRelacionados() {
+      try {
+        const { data: clientesData, error: errClientes } = await supabase.from('clientes').select('*');
+        if (errClientes) throw errClientes;
+        setListaClientes(clientesData || []);
+
+        const { data: produtosData, error: errProdutos } = await supabase.from('produtos').select('*');
+        if (errProdutos) throw errProdutos;
+        setListaMaquinas(produtosData || []);
+      } catch (err) {
+        console.error('Erro ao carregar dados para o pedido:', err.message);
+      }
+    }
+
+    if (isOpen) {
+      carregarDadosRelacionados();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    onClose();
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('pedidos')
+        .insert([
+          {
+            cliente: cliente,
+            produto: maquina,
+            quantidade: Number(quantidade),
+            valor_total: Number(valorTotal.replace(/\./g, '').replace(',', '.')),
+            status: 'Pendente'
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+
+      if (onPedidoCriado && data) {
+        onPedidoCriado(data[0]);
+      }
+
+      onClose();
+    } catch (err) {
+      console.error('Erro ao criar pedido:', err.message);
+      alert('Erro ao guardar o pedido na base de dados.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,7 +88,7 @@ export default function OrderDrawer({ isOpen, onClose }) {
           </div>
           <button 
             onClick={onClose}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800 p-2 rounded-md transition-colors"
+            className="text-zinc-400 hover:text-white hover:bg-zinc-800 p-2 rounded-md transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -50,9 +105,11 @@ export default function OrderDrawer({ isOpen, onClose }) {
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="">Selecione um cliente...</option>
-                <option value="CLI-001">Metalúrgica São Jorge</option>
-                <option value="CLI-002">Indústria Ferro & Aço Ltda.</option>
-                <option value="CLI-003">Tubos & Perfis do Sul</option>
+                {listaClientes.map((c) => (
+                  <option key={c.id} value={c.nome}>
+                    {c.nome}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -65,9 +122,11 @@ export default function OrderDrawer({ isOpen, onClose }) {
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="">Selecione uma máquina...</option>
-                <option value="MAQ-01">Dobradeira CNC 160 ton</option>
-                <option value="MAQ-02">Corte a Laser Fibra 3kW</option>
-                <option value="MAQ-03">Calandra de 3 Rolos 2000mm</option>
+                {listaMaquinas.map((m) => (
+                  <option key={m.id} value={m.nome}>
+                    {m.nome} ({m.codigo})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -104,7 +163,7 @@ export default function OrderDrawer({ isOpen, onClose }) {
                   value={quantidade}
                   onChange={(e) => setQuantidade(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: 2 un."
+                  placeholder="Ex: 2"
                 />
               </div>
               <div>
@@ -115,7 +174,7 @@ export default function OrderDrawer({ isOpen, onClose }) {
                   value={valorTotal}
                   onChange={(e) => setValorTotal(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: 45.000,00"
+                  placeholder="Ex: 45000"
                 />
               </div>
             </div>
@@ -137,16 +196,18 @@ export default function OrderDrawer({ isOpen, onClose }) {
           <button 
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button 
             type="submit"
             form="order-form"
-            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 cursor-pointer"
           >
-            Salvar Pedido
+            {loading ? 'A guardar...' : 'Salvar Pedido'}
           </button>
         </div>
       </div>
