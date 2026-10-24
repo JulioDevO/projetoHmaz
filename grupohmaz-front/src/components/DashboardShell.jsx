@@ -80,7 +80,9 @@ export default function DashboardShell() {
           </nav>
         </div>
 
-        {/* Rodapé com Botão de Logout */}
+        {
+          
+        }
         <div className="p-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase shrink-0">
