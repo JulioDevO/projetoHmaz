@@ -1,216 +1,185 @@
-import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-export default function OrderDrawer({ isOpen, onClose, onPedidoCriado }) {
+export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEditar }) {
   const [cliente, setCliente] = useState('');
-  const [maquina, setMaquina] = useState('');
-  const [dataEmissao, setDataEmissao] = useState('2026-09-27');
-  const [previsaoEntrega, setPrevisaoEntrega] = useState('');
-  const [quantidade, setQuantidade] = useState('');
+  const [produto, setProduto] = useState('');
+  const [quantidade, setQuantidade] = useState(1);
   const [valorTotal, setValorTotal] = useState('');
-  const [notas, setNotas] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Estados para armazenar as listas dinâmicas do Supabase
-  const [listaClientes, setListaClientes] = useState([]);
-  const [listaMaquinas, setListaMaquinas] = useState([]);
-
-  // Carregar clientes e produtos reais do Supabase ao abrir o drawer
+  // Preenche o formulário se receber dados para edição, ou limpa se for novo
   useEffect(() => {
-    async function carregarDadosRelacionados() {
-      try {
-        const { data: clientesData, error: errClientes } = await supabase.from('clientes').select('*');
-        if (errClientes) throw errClientes;
-        setListaClientes(clientesData || []);
-
-        const { data: produtosData, error: errProdutos } = await supabase.from('produtos').select('*');
-        if (errProdutos) throw errProdutos;
-        setListaMaquinas(produtosData || []);
-      } catch (err) {
-        console.error('Erro ao carregar dados para o pedido:', err.message);
-      }
+    if (pedidoParaEditar) {
+      setCliente(pedidoParaEditar.cliente !== 'Cliente não definido' ? pedidoParaEditar.cliente : '');
+      setProduto(pedidoParaEditar.maquina !== 'Produto não definido' ? pedidoParaEditar.maquina : '');
+      setQuantidade(pedidoParaEditar.qtd);
+      setValorTotal(pedidoParaEditar.valorRaw);
+    } else {
+      setCliente('');
+      setProduto('');
+      setQuantidade(1);
+      setValorTotal('');
     }
+  }, [pedidoParaEditar, isOpen]);
 
-    if (isOpen) {
-      carregarDadosRelacionados();
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleSave = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('pedidos')
-        .insert([
-          {
-            cliente: cliente,
-            produto: maquina,
-            quantidade: Number(quantidade),
-            valor_total: Number(valorTotal.replace(/\./g, '').replace(',', '.')),
-            status: 'Pendente'
-          }
-        ])
-        .select();
+      const payload = {
+        cliente,
+        produto,
+        quantidade,
+        valor_total: valorTotal,
+      };
 
-      if (error) throw error;
-
-      if (onPedidoCriado && data) {
-        onPedidoCriado(data[0]);
+      if (pedidoParaEditar) {
+        // Atualiza o pedido existente
+        const { error } = await supabase
+          .from('pedidos')
+          .update(payload)
+          .eq('id', pedidoParaEditar.dbId);
+        
+        if (error) throw error;
+      } else {
+        // Cria um novo pedido (mantendo o status default 'Pendente' definido no DB)
+        const { error } = await supabase
+          .from('pedidos')
+          .insert([payload]);
+        
+        if (error) throw error;
       }
 
-      onClose();
-    } catch (err) {
-      console.error('Erro ao criar pedido:', err.message);
-      alert('Erro ao guardar o pedido na base de dados.');
+      onSuccess(); // Recarrega a lista no componente pai
+      onClose();   // Fecha a gaveta
+    } catch (error) {
+      console.error('Erro ao salvar pedido:', error.message);
+      alert('Erro ao salvar pedido. Verifique o console.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" 
-        onClick={onClose} 
-      />
+    <>
+      {/* Fundo escuro */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+          onClick={onClose}
+        />
+      )}
 
-      <div className="relative w-full max-w-lg max-h-[90vh] bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl flex flex-col">
+      {/* Gaveta */}
+      <div className={`fixed inset-y-0 right-0 w-full md:w-[450px] bg-white dark:bg-[#0a0a0a] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+        {/* Cabeçalho da Gaveta */}
+        <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/30">
           <div>
-            <h3 className="text-lg font-semibold text-white">Novo Pedido</h3>
-            <p className="text-sm text-zinc-400">Cadastre uma nova ordem de produção.</p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              {pedidoParaEditar ? `Editar ${pedidoParaEditar.id}` : 'Novo Pedido'}
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {pedidoParaEditar ? 'Atualize as informações do pedido' : 'Preencha os dados de produção'}
+            </p>
           </div>
           <button 
             onClick={onClose}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800 p-2 rounded-md transition-colors cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-          <form id="order-form" onSubmit={handleSave} className="flex flex-col gap-5">
+        {/* Corpo (Formulário) */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
+            
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Cliente</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Cliente</label>
               <select 
                 required
                 value={cliente}
                 onChange={(e) => setCliente(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="">Selecione um cliente...</option>
-                {listaClientes.map((c) => (
-                  <option key={c.id} value={c.nome}>
-                    {c.nome}
-                  </option>
-                ))}
+                <option value="Metalúrgica São Jorge">Metalúrgica São Jorge</option>
+                <option value="Indústria Ferro & Aço Ltda.">Indústria Ferro & Aço Ltda.</option>
+                <option value="Tubos & Perfis do Sul">Tubos & Perfis do Sul</option>
+                <option value="EMPRESA TESTE">EMPRESA TESTE</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Máquina / Equipamento</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Máquina / Produto</label>
               <select 
                 required
-                value={maquina}
-                onChange={(e) => setMaquina(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                value={produto}
+                onChange={(e) => setProduto(e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="">Selecione uma máquina...</option>
-                {listaMaquinas.map((m) => (
-                  <option key={m.id} value={m.nome}>
-                    {m.nome} ({m.codigo})
-                  </option>
-                ))}
+                <option value="">Selecione o equipamento...</option>
+                <option value="Dobradeira CNC 160 ton">Dobradeira CNC 160 ton</option>
+                <option value="Corte a Laser Fibra 3kW">Corte a Laser Fibra 3kW</option>
+                <option value="Calandra de 3 Rolos 2000mm">Calandra de 3 Rolos 2000mm</option>
+                <option value="Calandra de 4 Rolos 3000mm">Calandra de 4 Rolos 3000mm</option>
+                <option value="Prensa Hidráulica 100t">Prensa Hidráulica 100t</option>
+                <option value="Maquina Teste">Maquina Teste</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Data de Emissão</label>
-                <input 
-                  type="date" 
-                  required
-                  value={dataEmissao}
-                  onChange={(e) => setDataEmissao(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Previsão de Entrega</label>
-                <input 
-                  type="date" 
-                  required
-                  value={previsaoEntrega}
-                  onChange={(e) => setPrevisaoEntrega(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-text"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
                <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Quantidade</label>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Quantidade</label>
                 <input 
                   type="number" 
                   min="1"
                   required
                   value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: 2"
+                  onChange={(e) => setQuantidade(Number(e.target.value))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Valor Total (R$)</label>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Valor Total (R$)</label>
                 <input 
-                  type="text" 
+                  type="number" 
+                  step="0.01"
                   required
                   value={valorTotal}
                   onChange={(e) => setValorTotal(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                   placeholder="Ex: 45000"
                 />
               </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Notas Administrativas</label>
-              <textarea 
-                rows="3"
-                value={notas}
-                onChange={(e) => setNotas(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 resize-none"
-                placeholder="Adicione observações internas sobre o pedido..."
-              />
-            </div>
           </form>
         </div>
 
-        <div className="p-6 border-t border-zinc-800 flex justify-end gap-3 bg-zinc-950 rounded-b-xl">
+        {/* Rodapé da Gaveta (Botões) */}
+        <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 flex justify-end gap-3">
           <button 
             type="button"
             onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors cursor-pointer"
+            className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white bg-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors"
           >
             Cancelar
           </button>
           <button 
-            type="submit"
             form="order-form"
+            type="submit"
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2"
           >
-            {loading ? 'A guardar...' : 'Salvar Pedido'}
+            <Save size={16} />
+            {loading ? 'A processar...' : (pedidoParaEditar ? 'Atualizar Pedido' : 'Criar Pedido')}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -15,6 +15,7 @@ function ProtectedRoute({ children, roleRequerida }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Bloqueia se a rota exigir admin e o utilizador não for
   if (roleRequerida && user.role !== roleRequerida) {
     return <Navigate to="/pedidos" replace />;
   }
@@ -43,7 +44,13 @@ export default function App() {
             <Route path="/pedidos" element={<Pedidos />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/maquinas" element={<Maquinas />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
+            
+            {/* Rota Protegida Apenas para Admin */}
+            <Route path="/configuracoes" element={
+              <ProtectedRoute roleRequerida="admin">
+                <Configuracoes />
+              </ProtectedRoute>
+            } />
           </Route>
         </Routes>
       </Router>
