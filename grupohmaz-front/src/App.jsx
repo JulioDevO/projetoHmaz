@@ -8,14 +8,15 @@ import Clientes from './pages/Clientes';
 import Maquinas from './pages/Maquinas';
 import Configuracoes from './pages/Configuracoes';
 
-function ProtectedRoute({ children, roleRequerida }) {
+function ProtectedRoute({ children, rolesPermitidas }) {
   const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (roleRequerida && user.role !== roleRequerida) {
+  // Verifica se o utilizador tem uma das roles permitidas (ex: admin ou dev)
+  if (rolesPermitidas && !rolesPermitidas.includes(user.role)) {
     return <Navigate to="/pedidos" replace />;
   }
 
@@ -44,8 +45,9 @@ export default function App() {
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/maquinas" element={<Maquinas />} />
             
+            {/* Agora permite tanto admin quanto dev */}
             <Route path="/configuracoes" element={
-              <ProtectedRoute roleRequerida="dev">
+              <ProtectedRoute rolesPermitidas={['admin', 'dev']}>
                 <Configuracoes />
               </ProtectedRoute>
             } />
