@@ -18,6 +18,7 @@ export default function DashboardShell() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-300">
+      {/* Barra lateral adaptativa para modo claro e escuro */}
       <aside className="w-64 bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between p-4 flex-shrink-0 transition-colors duration-300">
         <div className="flex flex-col gap-6 overflow-hidden">
           <div className="px-2 py-1">
@@ -80,15 +81,16 @@ export default function DashboardShell() {
           </nav>
         </div>
 
+        {/* Rodapé da barra lateral */}
         <div className="p-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase shrink-0">
               {user?.nome ? user.nome.charAt(0) : 'U'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{user?.nome || 'Usuário'}</p>
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{user?.nome || 'Utilizador'}</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">
-                {user?.role === 'dev' ? 'Desenvolvedor' : user?.role === 'admin' ? 'Administrador' : 'Equipe'}
+                {user?.role === 'dev' ? 'Desenvolvedor' : user?.role === 'admin' ? 'Administrador' : user?.role === 'operador' ? 'Operador' : 'Equipe'}
               </p>
             </div>
           </div>
@@ -102,6 +104,7 @@ export default function DashboardShell() {
         </div>
       </aside>
 
+      {/* Conteúdo Principal */}
       <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300">
         <div className="p-6 md:p-8 flex-1 overflow-auto custom-scrollbar">
           <Outlet />
