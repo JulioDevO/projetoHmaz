@@ -11,7 +11,6 @@ export function AuthProvider({ children }) {
     // 1. Busca a sessão ativa ao abrir o site
     supabase.auth.getSession().then(({ data: { session } }) => {
       atualizarUsuario(session);
-      setLoading(false);
     });
 
     // 2. Escuta mudanças em tempo real (login, logout, token expirado)
@@ -22,18 +21,38 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const atualizarUsuario = (session) => {
+  const atualizarUsuario = async (session) => {
     if (session?.user) {
-      const email = session.user.email || '';
-      setUser({
-        id: session.user.id,
-        email: email,
-        nome: email.includes('admin') ? 'Administrador' : 'Equipe de Produção',
-        role: email.includes('admin') ? 'admin' : 'equipe'
-      });
+      try {
+        // Busca o perfil real na tabela perfis do Supabase
+        const { data: perfil, error } = await supabase
+          .from('perfis')
+          .select('nome, nivel_acesso')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) throw error;
+
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          nome: perfil?.nome || 'Usuário',
+          role: perfil?.nivel_acesso || 'equipe'
+        });
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error.message);
+        // Fallback de segurança
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          nome: 'Usuário',
+          role: 'equipe'
+        });
+      }
     } else {
       setUser(null);
     }
+    setLoading(false);
   };
 
   const logout = async () => {
