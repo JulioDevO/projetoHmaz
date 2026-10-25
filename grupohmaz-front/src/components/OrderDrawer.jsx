@@ -8,36 +8,53 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
   const [quantidade, setQuantidade] = useState(1);
   const [valorTotal, setValorTotal] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const [listaMaquinas, setListaMaquinas] = useState([]);
 
-  // Fecha a gaveta ao pressionar a tecla "Escape"
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const [clientesLista, setClientesLista] = useState([]);
+  const [maquinasLista, setMaquinasLista] = useState([]);
 
+  // Dispara a busca SEMPRE que a gaveta for aberta (isOpen)
   useEffect(() => {
-    async function carregarMaquinas() {
+    async function carregarOpcoes() {
+      if (!isOpen) return; // Só busca se a gaveta estiver aberta
+      
       try {
-        const { data, error } = await supabase.from('maquinas').select('*');
-        if (error) throw error;
-        setListaMaquinas(data || []);
-      } catch (error) {
-        console.error('Erro ao carregar máquinas:', error.message);
+        console.log("A buscar dados no Supabase...");
+        
+        // 1. Busca Clientes
+        const { data: clientesData, error: erroClientes } = await supabase
+          .from('clientes')
+          .select('nome')
+          .order('nome');
+          
+        if (erroClientes) {
+          console.error('Erro Supabase (Clientes):', erroClientes.message);
+        } else {
+          console.log("Clientes recebidos:", clientesData);
+          setClientesLista(clientesData || []);
+        }
+
+        // 2. Busca Produtos
+        const { data: maquinasData, error: erroMaquinas } = await supabase
+          .from('produtos')
+          .select('nome')
+          .order('nome');
+          
+        if (erroMaquinas) {
+          console.error('Erro Supabase (Produtos):', erroMaquinas.message);
+        } else {
+          console.log("Produtos recebidos:", maquinasData);
+          setMaquinasLista(maquinasData || []);
+        }
+
+      } catch (err) {
+        console.error('Erro fatal ao carregar opções:', err.message);
       }
     }
-
-    if (isOpen) {
-      carregarMaquinas();
-    }
+    
+    carregarOpcoes();
   }, [isOpen]);
 
+  // Preenche o formulário se for edição
   useEffect(() => {
     if (pedidoParaEditar) {
       setCliente(pedidoParaEditar.cliente !== 'Cliente não definido' ? pedidoParaEditar.cliente : '');
@@ -65,25 +82,18 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
       };
 
       if (pedidoParaEditar) {
-        const { error } = await supabase
-          .from('pedidos')
-          .update(payload)
-          .eq('id', pedidoParaEditar.dbId);
-        
+        const { error } = await supabase.from('pedidos').update(payload).eq('id', pedidoParaEditar.dbId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('pedidos')
-          .insert([payload]);
-        
+        const { error } = await supabase.from('pedidos').insert([payload]);
         if (error) throw error;
       }
 
-      onSuccess();
-      onClose();
+      onSuccess(); 
+      onClose();   
     } catch (error) {
       console.error('Erro ao salvar pedido:', error.message);
-      alert('Erro ao salvar pedido. Verifique o console.');
+      alert('Erro ao guardar o pedido.');
     } finally {
       setLoading(false);
     }
@@ -95,31 +105,21 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
           onClick={onClose}
-          aria-hidden="true"
         />
       )}
 
-      <div 
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="drawer-title"
-        className={`fixed inset-y-0 right-0 w-full md:w-[450px] bg-white dark:bg-[#0a0a0a] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
-      >
+      <div className={`fixed inset-y-0 right-0 w-full md:w-[450px] bg-white dark:bg-[#0a0a0a] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
         <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/30">
           <div>
-            <h2 id="drawer-title" className="text-lg font-semibold text-zinc-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               {pedidoParaEditar ? `Editar ${pedidoParaEditar.id}` : 'Novo Pedido'}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
               {pedidoParaEditar ? 'Atualize as informações do pedido' : 'Preencha os dados de produção'}
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            aria-label="Fechar formulário de pedido"
-            className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
-          >
+          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -128,68 +128,56 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
           <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
             
             <div>
-              <label htmlFor="cliente" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Cliente</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Cliente</label>
               <select 
-                id="cliente"
                 required
-                autoFocus
-                disabled={loading}
                 value={cliente}
                 onChange={(e) => setCliente(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="">Selecione um cliente...</option>
-                <option value="Metalúrgica São Jorge">Metalúrgica São Jorge</option>
-                <option value="Indústria Ferro & Aço Ltda.">Indústria Ferro & Aço Ltda.</option>
-                <option value="Tubos & Perfis do Sul">Tubos & Perfis do Sul</option>
-                <option value="EMPRESA TESTE">EMPRESA TESTE</option>
+                {clientesLista.map((c, i) => (
+                  <option key={i} value={c.nome}>{c.nome}</option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label htmlFor="produto" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Máquina / Produto</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Máquina / Produto</label>
               <select 
-                id="produto"
                 required
-                disabled={loading}
                 value={produto}
                 onChange={(e) => setProduto(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="">Selecione o equipamento...</option>
-                {listaMaquinas.map((maq) => (
-                  <option key={maq.id} value={maq.nome}>
-                    {maq.nome} {maq.codigo ? `(${maq.codigo})` : ''}
-                  </option>
+                {maquinasLista.map((m, i) => (
+                  <option key={i} value={m.nome}>{m.nome}</option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                <div>
-                <label htmlFor="quantidade" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Quantidade</label>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Quantidade</label>
                 <input 
-                  id="quantidade"
                   type="number" 
                   min="1"
                   required
-                  disabled={loading}
                   value={quantidade}
                   onChange={(e) => setQuantidade(Number(e.target.value))}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="valorTotal" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Valor Total (R$)</label>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Valor Total (R$)</label>
                 <input 
-                  id="valorTotal"
                   type="number" 
                   step="0.01"
                   required
-                  disabled={loading}
                   value={valorTotal}
                   onChange={(e) => setValorTotal(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                   placeholder="Ex: 45000"
                 />
               </div>
@@ -198,19 +186,10 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
         </div>
 
         <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 flex justify-end gap-3">
-          <button 
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white bg-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
-          >
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white bg-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md transition-colors">
             Cancelar
           </button>
-          <button 
-            form="order-form"
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900 cursor-pointer"
-          >
+          <button form="order-form" type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2">
             <Save size={16} />
             {loading ? 'A processar...' : (pedidoParaEditar ? 'Atualizar Pedido' : 'Criar Pedido')}
           </button>
