@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; 
 import { 
-  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut
+  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut, ChevronLeft, Menu, User
 } from 'lucide-react';
 
 export default function DashboardShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Estado que controla se a barra lateral está aberta ou fechada
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -16,32 +20,69 @@ export default function DashboardShell() {
 
   const isActive = (path) => location.pathname === path;
 
+  // Função para definir o rótulo do perfil
+  const getRoleLabel = (role) => {
+    if (role === 'dev') return 'Desenvolvedor';
+    if (role === 'admin') return 'Administrativo';
+    return 'Operacional';
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-300">
-      {/* Barra lateral adaptativa para modo claro e escuro */}
-      <aside className="w-64 bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between p-4 flex-shrink-0 transition-colors duration-300">
-        <div className="flex flex-col gap-6 overflow-hidden">
-          <div className="px-2 py-1">
-            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-500">Grupo Hmaz</h1>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 block mt-1">Máquinas Customizadas</span>
+      
+      {/* Barra Lateral Adaptativa */}
+      <aside 
+        className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between flex-shrink-0 transition-all duration-300 ease-in-out z-20`}
+      >
+        <div className="flex flex-col overflow-hidden">
+          
+          {/* Cabeçalho da Barra Lateral */}
+          <div className={`h-16 p-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border-b border-zinc-200 dark:border-zinc-800 shrink-0`}>
+            {!isCollapsed && (
+              <div className="overflow-hidden whitespace-nowrap">
+                <h1 className="text-xl font-bold text-blue-600 dark:text-blue-500 truncate">Grupo Hmaz</h1>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block truncate mt-0.5 uppercase tracking-wider font-medium">Máquinas Customizadas</span>
+              </div>
+            )}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
+              title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer shrink-0"
+            >
+              {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
+            </button>
           </div>
           
-          <nav className="flex flex-col gap-1.5 mt-2">
+          {/* Navegação */}
+          <nav className="flex flex-col gap-1.5 p-3 overflow-y-auto custom-scrollbar">
             <button 
               onClick={() => navigate('/pedidos')} 
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${isActive('/pedidos') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              title={isCollapsed ? "Pedidos" : undefined}
+              aria-label="Pedidos"
+              className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                isActive('/pedidos') 
+                  ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+              }`}
             >
-              <Kanban size={18} className="flex-shrink-0" />
-              <span className="truncate">Pedidos</span>
+              <Kanban size={18} className="shrink-0" />
+              {!isCollapsed && <span className="truncate">Pedidos</span>}
             </button>
             
             {(user?.role === 'admin' || user?.role === 'dev') && (
               <button 
-                onClick={() => navigate('/analytics')} 
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${isActive('/analytics') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                onClick={() => navigate('/analytics')}
+                title={isCollapsed ? "Análises" : undefined}
+                aria-label="Análises"
+                className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  isActive('/analytics') 
+                    ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
               >
-                <LayoutDashboard size={18} className="flex-shrink-0" />
-                <span className="truncate">Análises</span>
+                <LayoutDashboard size={18} className="shrink-0" />
+                {!isCollapsed && <span className="truncate">Análises</span>}
               </button>
             )}
             
@@ -49,55 +90,72 @@ export default function DashboardShell() {
             
             <button 
               onClick={() => navigate('/clientes')} 
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${isActive('/clientes') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              title={isCollapsed ? "Clientes" : undefined}
+              aria-label="Clientes"
+              className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                isActive('/clientes') 
+                  ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+              }`}
             >
-              <Users size={18} className="flex-shrink-0" />
-              <span className="truncate">Clientes</span>
+              <Users size={18} className="shrink-0" />
+              {!isCollapsed && <span className="truncate">Clientes</span>}
             </button>
             
             <button 
               onClick={() => navigate('/maquinas')} 
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${isActive('/maquinas') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              title={isCollapsed ? "Máquinas" : undefined}
+              aria-label="Máquinas"
+              className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                isActive('/maquinas') 
+                  ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+              }`}
             >
-              <Wrench size={18} className="flex-shrink-0" />
-              <span className="truncate">Máquinas</span>
+              <Wrench size={18} className="shrink-0" />
+              {!isCollapsed && <span className="truncate">Máquinas</span>}
             </button>
             
-            <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-2"></div>
-            
             {user?.role === 'dev' && (
-              <button 
-                onClick={() => navigate('/configuracoes')} 
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${
-                  isActive('/configuracoes') 
-                    ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Settings size={18} className="flex-shrink-0" />
-                <span className="truncate">Configurações</span>
-              </button>
+              <>
+                <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-2"></div>
+                <button 
+                  onClick={() => navigate('/configuracoes')} 
+                  title={isCollapsed ? "Configurações" : undefined}
+                  aria-label="Configurações"
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    isActive('/configuracoes') 
+                      ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <Settings size={18} className="shrink-0" />
+                  {!isCollapsed && <span className="truncate">Configurações</span>}
+                </button>
+              </>
             )}
           </nav>
         </div>
 
-        {/* Rodapé da barra lateral */}
-        <div className="p-3 mt-auto border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase shrink-0">
-              {user?.nome ? user.nome.charAt(0) : 'U'}
+        {/* Rodapé da barra lateral (Perfil e Logout) */}
+        <div className={`p-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center ${isCollapsed ? 'flex-col justify-center gap-4' : 'justify-between'} shrink-0 bg-white dark:bg-[#121214]`}>
+          <div className="flex items-center gap-3 overflow-hidden" title={getRoleLabel(user?.role)}>
+            <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shrink-0">
+              <User size={18} />
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{user?.nome || 'Utilizador'}</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 capitalize truncate">
-                {user?.role === 'dev' ? 'Desenvolvedor' : user?.role === 'admin' ? 'Administrador' : user?.role === 'operador' ? 'Operador' : 'Equipe'}
-              </p>
-            </div>
+            {!isCollapsed && (
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                  {getRoleLabel(user?.role)}
+                </p>
+              </div>
+            )}
           </div>
           <button 
             onClick={handleLogout}
-            className="p-2 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors cursor-pointer shrink-0"
-            title="Sair do sistema"
+            aria-label="Sair do sistema"
+            title={isCollapsed ? "Sair do sistema" : undefined}
+            className={`p-2 rounded-md transition-colors cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 ${isCollapsed ? 'w-10 h-10 flex items-center justify-center mt-2 bg-zinc-50 dark:bg-zinc-900' : ''}`}
           >
             <LogOut size={18} />
           </button>
@@ -105,7 +163,7 @@ export default function DashboardShell() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300">
+      <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 min-w-0">
         <div className="p-6 md:p-8 flex-1 overflow-auto custom-scrollbar">
           <Outlet />
         </div>

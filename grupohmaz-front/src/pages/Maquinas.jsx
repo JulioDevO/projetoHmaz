@@ -16,6 +16,7 @@ export default function Maquinas() {
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
 
+  // Fecha o dropdown se clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.dropdown-container')) {
@@ -25,6 +26,17 @@ export default function Maquinas() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fecha o modal ao pressionar a tecla "Escape"
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        handleFecharModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
 
   async function carregarProdutos() {
     try {
@@ -68,25 +80,13 @@ export default function Maquinas() {
       if (produtoEditando) {
         const { error } = await supabase
           .from('produtos')
-          .update({
-            codigo,
-            nome,
-            descricao
-          })
+          .update({ codigo, nome, descricao })
           .eq('id', produtoEditando);
-
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('produtos')
-          .insert([
-            {
-              codigo,
-              nome,
-              descricao
-            }
-          ]);
-
+          .insert([{ codigo, nome, descricao }]);
         if (error) throw error;
       }
 
@@ -115,7 +115,7 @@ export default function Maquinas() {
         </div>
         <button 
           onClick={() => { handleFecharModal(); setIsModalOpen(true); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
         >
           <Plus size={16} /> Nova Máquina
         </button>
@@ -130,7 +130,7 @@ export default function Maquinas() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Pesquisar por código, nome ou descrição..." 
-              className="w-full bg-zinc-50 dark:bg-[#1e1e20] border border-zinc-300 dark:border-zinc-700 rounded-md pl-9 pr-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-zinc-500 transition-colors"
+              className="w-full bg-zinc-50 dark:bg-[#1e1e20] border border-zinc-300 dark:border-zinc-700 rounded-md pl-9 pr-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
@@ -172,7 +172,9 @@ export default function Maquinas() {
                       <div className="flex justify-center">
                         <button 
                           onClick={() => setMenuAberto(menuAberto === prod.id ? null : prod.id)}
-                          className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                          aria-label={`Ações para ${prod.nome}`}
+                          aria-expanded={menuAberto === prod.id}
+                          className={`p-1.5 rounded-md transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                             menuAberto === prod.id 
                               ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' 
                               : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
@@ -185,7 +187,7 @@ export default function Maquinas() {
                           <div className="absolute right-12 top-10 w-44 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 flex flex-col py-1.5 animate-in fade-in zoom-in-95 duration-100">
                             <button 
                               onClick={() => handleAbrirEdicao(prod)}
-                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer w-full text-left font-medium"
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer w-full text-left font-medium focus:outline-none focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800"
                             >
                               <Pencil size={15} />
                               Editar Máquina
@@ -204,53 +206,73 @@ export default function Maquinas() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={handleFecharModal} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl flex flex-col z-10 transition-colors">
+          <div 
+            className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" 
+            onClick={handleFecharModal}
+            aria-hidden="true" 
+          />
+          <div 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-maquina-title"
+            className="relative w-full max-w-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl flex flex-col z-10 transition-colors"
+          >
             <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
               <div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+                <h3 id="modal-maquina-title" className="text-lg font-semibold text-zinc-900 dark:text-white">
                   {produtoEditando ? 'Editar Máquina / Produto' : 'Nova Máquina / Produto'}
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
                   {produtoEditando ? 'Atualize as informações do equipamento.' : 'Cadastre um novo equipamento no catálogo.'}
                 </p>
               </div>
-              <button onClick={handleFecharModal} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-2 rounded-md cursor-pointer transition-colors">
+              <button 
+                onClick={handleFecharModal} 
+                aria-label="Fechar formulário"
+                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-2 rounded-md cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleSalvarMaquina} className="p-6 flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Código</label>
+                <label htmlFor="codigo" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Código</label>
                 <input 
+                  id="codigo"
                   type="text" 
                   required
+                  autoFocus
+                  disabled={salvando}
                   value={codigo}
                   onChange={(e) => setCodigo(e.target.value)}
                   placeholder="Ex: MAQ-04" 
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nome / Modelo</label>
+                <label htmlFor="nome" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nome / Modelo</label>
                 <input 
+                  id="nome"
                   type="text" 
                   required
+                  disabled={salvando}
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Prensa Hidráulica 200t" 
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Descrição</label>
+                <label htmlFor="descricao" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Descrição</label>
                 <textarea 
+                  id="descricao"
                   rows="2"
+                  disabled={salvando}
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Detalhes do equipamento..." 
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 disabled:opacity-60 resize-none transition-colors"
                 />
               </div>
 
@@ -258,14 +280,14 @@ export default function Maquinas() {
                 <button 
                   type="button"
                   onClick={handleFecharModal}
-                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors cursor-pointer"
+                  className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
                   disabled={salvando}
-                  className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
                 >
                   {salvando ? 'A guardar...' : (produtoEditando ? 'Atualizar Máquina' : 'Salvar Máquina')}
                 </button>

@@ -15,7 +15,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate(user.role === 'admin' ? '/analytics' : '/pedidos');
+      navigate('/pedidos');
     }
   }, [user, navigate]);
 
@@ -33,12 +33,8 @@ export default function Login() {
       setErro('Credenciais inválidas. Verifique seu e-mail e senha no Supabase.');
       setLoading(false);
     } else {
-      // O Supabase gerou o token automaticamente
-      if (email.includes('admin')) {
-        navigate('/analytics');
-      } else {
-        navigate('/pedidos');
-      }
+      // Redireciona sempre para pedidos, independentemente do tipo de utilizador
+      navigate('/pedidos');
     }
   };
 

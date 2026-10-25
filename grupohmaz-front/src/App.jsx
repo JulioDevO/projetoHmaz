@@ -27,7 +27,7 @@ function RootRoute() {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to={(user.role === 'admin' || user.role === 'dev') ? '/analytics' : '/pedidos'} replace />;
+  return <Navigate to="/pedidos" replace />;
 }
 
 export default function App() {
