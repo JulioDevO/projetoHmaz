@@ -7,6 +7,7 @@ import Pedidos from './pages/Pedidos';
 import Clientes from './pages/Clientes';
 import Maquinas from './pages/Maquinas';
 import Configuracoes from './pages/Configuracoes';
+import Feedbacks from './pages/Feedbacks'; // Importação da nova página
 
 function ProtectedRoute({ children, rolesPermitidas }) {
   const { user } = useAuth();
@@ -45,10 +46,17 @@ export default function App() {
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/maquinas" element={<Maquinas />} />
             
-            {/* Agora permite tanto admin quanto dev */}
+            {/* Rota de Configurações - Admin e Dev */}
             <Route path="/configuracoes" element={
               <ProtectedRoute rolesPermitidas={['admin', 'dev']}>
                 <Configuracoes />
+              </ProtectedRoute>
+            } />
+
+            {/* Nova Rota de Feedbacks - Admin e Dev */}
+            <Route path="/feedbacks" element={
+              <ProtectedRoute rolesPermitidas={['admin', 'dev']}>
+                <Feedbacks />
               </ProtectedRoute>
             } />
           </Route>

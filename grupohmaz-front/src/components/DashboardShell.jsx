@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; 
 import { 
-  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut, ChevronLeft, Menu, User
+  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut, ChevronLeft, Menu, User, MessageSquare
 } from 'lucide-react';
 
 export default function DashboardShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Estado que controla se a barra lateral está aberta ou fechada
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -29,13 +29,13 @@ export default function DashboardShell() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-300">
-      
+
       {/* Barra Lateral Adaptativa */}
       <aside 
         className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between flex-shrink-0 transition-all duration-300 ease-in-out z-20`}
       >
         <div className="flex flex-col overflow-hidden">
-          
+
           {/* Cabeçalho da Barra Lateral */}
           <div className={`h-16 p-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border-b border-zinc-200 dark:border-zinc-800 shrink-0`}>
             {!isCollapsed && (
@@ -53,7 +53,7 @@ export default function DashboardShell() {
               {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
             </button>
           </div>
-          
+
           {/* Navegação */}
           <nav className="flex flex-col gap-1.5 p-3 overflow-y-auto custom-scrollbar">
             <button 
@@ -69,7 +69,7 @@ export default function DashboardShell() {
               <Kanban size={18} className="shrink-0" />
               {!isCollapsed && <span className="truncate">Pedidos</span>}
             </button>
-            
+
             {(user?.role === 'admin' || user?.role === 'dev') && (
               <button 
                 onClick={() => navigate('/analytics')}
@@ -85,9 +85,9 @@ export default function DashboardShell() {
                 {!isCollapsed && <span className="truncate">Análises</span>}
               </button>
             )}
-            
+
             <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-2"></div>
-            
+
             <button 
               onClick={() => navigate('/clientes')} 
               title={isCollapsed ? "Clientes" : undefined}
@@ -101,7 +101,7 @@ export default function DashboardShell() {
               <Users size={18} className="shrink-0" />
               {!isCollapsed && <span className="truncate">Clientes</span>}
             </button>
-            
+
             <button 
               onClick={() => navigate('/maquinas')} 
               title={isCollapsed ? "Máquinas" : undefined}
@@ -115,7 +115,8 @@ export default function DashboardShell() {
               <Wrench size={18} className="shrink-0" />
               {!isCollapsed && <span className="truncate">Máquinas</span>}
             </button>
-            
+
+            {/* Menu exclusivo Dev */}
             {user?.role === 'dev' && (
               <>
                 <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-2"></div>
@@ -131,6 +132,26 @@ export default function DashboardShell() {
                 >
                   <Settings size={18} className="shrink-0" />
                   {!isCollapsed && <span className="truncate">Configurações</span>}
+                </button>
+              </>
+            )}
+
+            {/* Menu de Feedbacks (Admin e Dev) */}
+            {(user?.role === 'admin' || user?.role === 'dev') && (
+              <>
+                {user?.role !== 'dev' && <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-2"></div>}
+                <button 
+                  onClick={() => navigate('/feedbacks')} 
+                  title={isCollapsed ? "Feedbacks" : undefined}
+                  aria-label="Feedbacks"
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-0 w-11 h-11 mx-auto' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-colors text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    isActive('/feedbacks') 
+                      ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50' 
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <MessageSquare size={18} className="shrink-0" />
+                  {!isCollapsed && <span className="truncate">Feedbacks</span>}
                 </button>
               </>
             )}
@@ -163,7 +184,7 @@ export default function DashboardShell() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 min-w-0">
+      <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 min-w-0 z-10 relative">
         <div className="p-6 md:p-8 flex-1 overflow-auto custom-scrollbar">
           <Outlet />
         </div>
