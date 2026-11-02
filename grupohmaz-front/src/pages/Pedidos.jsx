@@ -14,7 +14,7 @@ const colunasIniciais = [
 export default function Pedidos() {
   const [colunas, setColunas] = useState(colunasIniciais);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [pedidoEditando, setPedidoEditando] = useState(null); // Guarda o pedido que será editado
+  const [pedidoEditando, setPedidoEditando] = useState(null); 
   
   const [dragInfo, setDragInfo] = useState(null);
   const [dropTarget, setDropTarget] = useState({ colId: null, index: null });
@@ -34,7 +34,7 @@ export default function Pedidos() {
         maquina: p.produto || 'Produto não definido',
         tag: 'Geral',
         qtd: p.quantidade || 1,
-        valorRaw: p.valor_total || 0, // Valor puro para o formulário de edição
+        valorRaw: p.valor_total || 0,
         valor: `R$ ${p.valor_total || 0}`,
         prazo: new Date(p.created_at).toLocaleDateString(),
         dias: '',
@@ -120,6 +120,8 @@ export default function Pedidos() {
 
   return (
     <div className={`flex flex-col w-full h-full text-zinc-900 dark:text-zinc-100 transition-colors duration-300 ${modoTV ? 'fixed inset-0 z-50 bg-zinc-50 dark:bg-[#0a0a0a] p-6' : ''}`}>
+      
+      {/* Cabeçalho */}
       <div className="flex flex-wrap justify-between items-center gap-4 mb-5 shrink-0">
         <div>
           <div className="flex items-center gap-3">
@@ -129,12 +131,12 @@ export default function Pedidos() {
           <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">Arraste os cartões para alterar a etapa ou definir a ordem de prioridade</p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button onClick={copiarLinkTV} className="bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-300 dark:border-zinc-800 flex items-center gap-1.5 shadow-sm">
-            {copiado ? <Check size={15} className="text-emerald-500" /> : <Link2 size={15} />} {copiado ? 'Link Copiado!' : 'Copiar Link TV'}
+            {copiado ? <Check size={15} className="text-emerald-500" /> : <Link2 size={15} />} <span className="hidden sm:inline">{copiado ? 'Link Copiado!' : 'Copiar Link TV'}</span>
           </button>
           <button onClick={() => setModoTV(!modoTV)} className="bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 px-3.5 py-2 rounded-md font-medium text-xs transition-colors border border-zinc-300 dark:border-zinc-800 flex items-center gap-1.5 shadow-sm">
-            {modoTV ? <Minimize2 size={15} /> : <MonitorPlay size={15} />} {modoTV ? 'Sair do Modo TV' : 'Modo TV'}
+            {modoTV ? <Minimize2 size={15} /> : <MonitorPlay size={15} />} <span className="hidden sm:inline">{modoTV ? 'Sair do Modo TV' : 'Modo TV'}</span>
           </button>
           {!modoTV && (
             <button onClick={() => setIsDrawerOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm">
@@ -144,9 +146,16 @@ export default function Pedidos() {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3.5 min-h-0 overflow-y-auto xl:overflow-hidden pb-2">
+      {/* Container Principal do Kanban com Scroll Horizontal corrigido */}
+      <div className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden snap-x snap-mandatory gap-4 pb-4 w-full custom-scrollbar items-stretch">
         {colunas.map((coluna) => (
-          <div key={coluna.id} onDragOver={(e) => handleDragOverColumn(e, coluna.id, coluna.pedidos.length)} onDrop={(e) => handleDrop(e, coluna.id)} className={`bg-white dark:bg-[#121214] rounded-xl border border-zinc-200 dark:border-zinc-800/80 border-t-2 ${coluna.borda} p-3 flex flex-col h-full min-h-[280px] transition-colors shadow-sm ${dropTarget.colId === coluna.id ? 'bg-zinc-100 dark:bg-zinc-900/50 border-zinc-400 dark:border-zinc-700' : ''}`}>
+          
+          <div 
+            key={coluna.id} 
+            onDragOver={(e) => handleDragOverColumn(e, coluna.id, coluna.pedidos.length)} 
+            onDrop={(e) => handleDrop(e, coluna.id)} 
+            className={`shrink-0 w-[280px] sm:w-[320px] xl:flex-1 xl:w-auto snap-center bg-white dark:bg-[#121214] rounded-xl border border-zinc-200 dark:border-zinc-800/80 border-t-2 ${coluna.borda} p-3 flex flex-col h-full min-h-[400px] transition-colors shadow-sm ${dropTarget.colId === coluna.id ? 'bg-zinc-100 dark:bg-zinc-900/50 border-zinc-400 dark:border-zinc-700' : ''}`}
+          >
             <div className="flex items-center justify-between mb-3 px-1 shrink-0">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${coluna.cor}`}></span>
