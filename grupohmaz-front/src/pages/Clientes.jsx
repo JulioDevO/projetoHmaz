@@ -216,7 +216,7 @@ export default function Clientes() {
         </div>
       </div>
 
-      {/* Modal de Criação / Edição */}
+      {/* Modal */}
       {isModalOpen && (
         <div 
           onClick={() => setIsModalOpen(false)}
