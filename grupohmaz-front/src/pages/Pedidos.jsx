@@ -35,8 +35,12 @@ export default function Pedidos() {
         tag: 'Geral',
         qtd: p.quantidade || 1,
         valorRaw: p.valor_total || 0,
-        valor: `R$ ${p.valor_total || 0}`,
-        prazo: new Date(p.created_at).toLocaleDateString(),
+        // Formatação correta em Moeda BRL (R$ 65.000,00)
+        valor: (Number(p.valor_total) || 0).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }),
+        prazo: new Date(p.created_at).toLocaleDateString('pt-BR'),
         dias: '',
         statusOriginal: p.status || 'Pendente'
       }));
@@ -146,7 +150,7 @@ export default function Pedidos() {
         </div>
       </div>
 
-      {/* Container Principal do Kanban com Scroll Horizontal corrigido */}
+      {/* Container Principal do Kanban */}
       <div className="flex-1 flex flex-nowrap overflow-x-auto overflow-y-hidden snap-x snap-mandatory gap-4 pb-4 w-full custom-scrollbar items-stretch">
         {colunas.map((coluna) => (
           

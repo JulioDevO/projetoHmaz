@@ -1,21 +1,51 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEditar }) {
   const [cliente, setCliente] = useState('');
-  const [produto, setProduto] = useState('');
-  const [quantidade, setQuantidade] = useState(1);
-  const [valorTotal, setValorTotal] = useState('');
+  const [itens, setItens] = useState([
+    { produto: '', quantidade: 1, valorTotal: '', observacao: '' }
+  ]);
   const [loading, setLoading] = useState(false);
 
   const [clientesLista, setClientesLista] = useState([]);
   const [maquinasLista, setMaquinasLista] = useState([]);
 
+  // Formata números vindos do banco (ex: 65000 -> "65.000,00")
+  const formatarParaMoeda = (valor) => {
+    if (valor === undefined || valor === null || valor === '') return '';
+    const num = Number(valor);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Máscara de digitação em tempo real (ex: digita 65000 -> "65.000,00")
+  const handleMoedaChange = (index, value) => {
+    const apenasDigitos = value.replace(/\D/g, '');
+    if (!apenasDigitos) {
+      handleItemChange(index, 'valorTotal', '');
+      return;
+    }
+    const valorDecimal = Number(apenasDigitos) / 100;
+    const valorFormatado = valorDecimal.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    handleItemChange(index, 'valorTotal', valorFormatado);
+  };
+
+  // Converte "65.000,00" de volta para 65000.00 antes de enviar ao Supabase
+  const converterParaNumero = (valorFormatado) => {
+    if (!valorFormatado) return 0;
+    const limpo = String(valorFormatado).replace(/\./g, '').replace(',', '.');
+    return parseFloat(limpo) || 0;
+  };
+
   // Dispara a busca SEMPRE que a gaveta for aberta (isOpen)
   useEffect(() => {
     async function carregarOpcoes() {
-      if (!isOpen) return; // Só busca se a gaveta estiver aberta
+      if (!isOpen) return;
       
       try {
         console.log("A buscar dados no Supabase...");
@@ -29,7 +59,6 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
         if (erroClientes) {
           console.error('Erro Supabase (Clientes):', erroClientes.message);
         } else {
-          console.log("Clientes recebidos:", clientesData);
           setClientesLista(clientesData || []);
         }
 
@@ -42,7 +71,6 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
         if (erroMaquinas) {
           console.error('Erro Supabase (Produtos):', erroMaquinas.message);
         } else {
-          console.log("Produtos recebidos:", maquinasData);
           setMaquinasLista(maquinasData || []);
         }
 
@@ -54,38 +82,72 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
     carregarOpcoes();
   }, [isOpen]);
 
-  // Preenche o formulário se for edição
+  // Preenche o formulário se for edição ou reseta para novo pedido
   useEffect(() => {
     if (pedidoParaEditar) {
       setCliente(pedidoParaEditar.cliente !== 'Cliente não definido' ? pedidoParaEditar.cliente : '');
-      setProduto(pedidoParaEditar.maquina !== 'Produto não definido' ? pedidoParaEditar.maquina : '');
-      setQuantidade(pedidoParaEditar.qtd);
-      setValorTotal(pedidoParaEditar.valorRaw);
+      setItens([
+        {
+          produto: pedidoParaEditar.maquina !== 'Produto não definido' ? pedidoParaEditar.maquina : '',
+          quantidade: pedidoParaEditar.qtd || 1,
+          valorTotal: formatarParaMoeda(pedidoParaEditar.valorRaw),
+          observacao: pedidoParaEditar.observacao || ''
+        }
+      ]);
     } else {
       setCliente('');
-      setProduto('');
-      setQuantidade(1);
-      setValorTotal('');
+      setItens([{ produto: '', quantidade: 1, valorTotal: '', observacao: '' }]);
     }
   }, [pedidoParaEditar, isOpen]);
+
+  // Adiciona um novo bloco de equipamento
+  const handleAddItem = () => {
+    setItens([...itens, { produto: '', quantidade: 1, valorTotal: '', observacao: '' }]);
+  };
+
+  // Remove um equipamento específico da lista
+  const handleRemoveItem = (index) => {
+    if (itens.length > 1) {
+      setItens(itens.filter((_, i) => i !== index));
+    }
+  };
+
+  // Atualiza os valores de um equipamento específico
+  const handleItemChange = (index, field, value) => {
+    const novosItens = [...itens];
+    novosItens[index][field] = value;
+    setItens(novosItens);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const payload = {
-        cliente,
-        produto,
-        quantidade,
-        valor_total: valorTotal,
-      };
-
       if (pedidoParaEditar) {
+        // Atualiza um único pedido existente
+        const item = itens[0];
+        const payload = {
+          cliente,
+          produto: item.produto,
+          quantidade: Number(item.quantidade),
+          valor_total: converterParaNumero(item.valorTotal),
+          observacao: item.observacao,
+        };
         const { error } = await supabase.from('pedidos').update(payload).eq('id', pedidoParaEditar.dbId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('pedidos').insert([payload]);
+        // Insere múltiplos pedidos de uma só vez (Bulk Insert)
+        const payload = itens.map((item) => ({
+          cliente,
+          produto: item.produto,
+          quantidade: Number(item.quantidade),
+          valor_total: converterParaNumero(item.valorTotal),
+          observacao: item.observacao,
+          status: 'Pendente'
+        }));
+        
+        const { error } = await supabase.from('pedidos').insert(payload);
         if (error) throw error;
       }
 
@@ -127,6 +189,7 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
             
+            {/* Cliente */}
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Cliente</label>
               <select 
@@ -142,45 +205,101 @@ export default function OrderDrawer({ isOpen, onClose, onSuccess, pedidoParaEdit
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Máquina / Produto</label>
-              <select 
-                required
-                value={produto}
-                onChange={(e) => setProduto(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Selecione o equipamento...</option>
-                {maquinasLista.map((m, i) => (
-                  <option key={i} value={m.nome}>{m.nome}</option>
-                ))}
-              </select>
-            </div>
+            {/* Lista Dinâmica de Equipamentos */}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {pedidoParaEditar ? 'Equipamento' : 'Equipamento(s) / Produto(s)'}
+              </label>
 
-            <div className="grid grid-cols-2 gap-4">
-               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Quantidade</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  required
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(Number(e.target.value))}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Valor Total (R$)</label>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  required
-                  value={valorTotal}
-                  onChange={(e) => setValorTotal(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: 45000"
-                />
-              </div>
+              {itens.map((item, index) => (
+                <div key={index} className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-3.5 relative">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                      Equipamento #{index + 1}
+                    </span>
+                    {!pedidoParaEditar && itens.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                        className="text-zinc-400 hover:text-red-500 transition-colors p-1"
+                        title="Remover este equipamento"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Máquina / Produto</label>
+                    <select 
+                      required
+                      value={item.produto}
+                      onChange={(e) => handleItemChange(index, 'produto', e.target.value)}
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Selecione o equipamento...</option>
+                      {maquinasLista.map((m, i) => (
+                        <option key={i} value={m.nome}>{m.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Quantidade</label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        required
+                        value={item.quantidade}
+                        onChange={(e) => handleItemChange(index, 'quantidade', Number(e.target.value))}
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+
+                    {/* Campo de Valor Total Formatado */}
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Valor Total</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                          R$
+                        </span>
+                        <input 
+                          type="text" 
+                          inputMode="numeric"
+                          required
+                          value={item.valorTotal}
+                          onChange={(e) => handleMoedaChange(index, e.target.value)}
+                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 pl-9 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          placeholder="0,00"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Campo de Observações */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Observações</label>
+                    <textarea 
+                      rows={2}
+                      value={item.observacao}
+                      onChange={(e) => handleItemChange(index, 'observacao', e.target.value)}
+                      placeholder="Especificações técnicas, detalhes de entrega ou observações..."
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {!pedidoParaEditar && (
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="w-full py-2.5 border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 bg-transparent hover:bg-blue-50/50 dark:hover:bg-blue-950/20 text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} /> Adicionar outro equipamento
+                </button>
+              )}
             </div>
           </form>
         </div>
