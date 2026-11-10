@@ -35,14 +35,14 @@ export default function Pedidos() {
         tag: 'Geral',
         qtd: p.quantidade || 1,
         valorRaw: p.valor_total || 0,
-        // Formatação correta em Moeda BRL (R$ 65.000,00)
         valor: (Number(p.valor_total) || 0).toLocaleString('pt-BR', {
           style: 'currency',
           currency: 'BRL'
         }),
         prazo: new Date(p.created_at).toLocaleDateString('pt-BR'),
         dias: '',
-        statusOriginal: p.status || 'Pendente'
+        statusOriginal: p.status || 'Pendente',
+        observacao: p.observacao || ''
       }));
 
       setColunas(colunasIniciais.map((coluna) => ({
