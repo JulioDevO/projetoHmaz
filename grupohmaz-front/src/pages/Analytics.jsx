@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  ClipboardList, Settings, CheckCircle2, 
-  FileText, FileSpreadsheet, Users, TrendingUp, Award
+  ClipboardList, CheckCircle2, 
+  FileText, FileSpreadsheet, Users, TrendingUp, Award, DollarSign, Package
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -11,7 +11,7 @@ export default function Analytics() {
   return (
     <div className="flex flex-col w-full h-full text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
       
-      {/* CABEÇALHO (Margens reduzidas) */}
+      {/* CABEÇALHO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
         <div>
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Análises Financeiras e Operacionais</h2>
@@ -19,7 +19,7 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* NAVEGAÇÃO POR ABAS (Margem reduzida) */}
+      {/* NAVEGAÇÃO POR ABAS */}
       <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-800 mb-4">
         <button 
           onClick={() => setAbaAtiva('operacional')}
@@ -54,11 +54,12 @@ export default function Analytics() {
 }
 
 // ==================================================
-// COMPONENTE: VISÃO OPERACIONAL (DASHBOARD)
+// COMPONENTE: VISÃO OPERACIONAL (DASHBOARD ANUAL)
 // ==================================================
 function VisaoOperacional() {
-  const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pedidos, setPedidos] = useState([]);
+  const [periodoFiltro, setPeriodoFiltro] = useState('proximos_12');
   const [hoveredStatus, setHoveredStatus] = useState(null);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ function VisaoOperacional() {
         if (error) throw error;
         setPedidos(data || []);
       } catch (err) {
-        console.error('Erro ao carregar dados operacionais:', err.message);
+        console.error('Erro ao carregar Analytics:', err.message);
       } finally {
         setLoading(false);
       }
@@ -77,18 +78,127 @@ function VisaoOperacional() {
     carregarDadosAnalytics();
   }, []);
 
-  const totalPedidos = pedidos.length;
-  const aFazer = pedidos.filter(p => p.status === 'Pendente').length;
-  const emProducao = pedidos.filter(p => p.status === 'Em Producao').length;
-  const revisao = pedidos.filter(p => p.status === 'Revisao').length;
-  const concluidos = pedidos.filter(p => p.status === 'Concluido').length;
-  const descartados = pedidos.filter(p => p.status === 'Cancelado').length;
+  if (loading) {
+    return (
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+        <div className="h-32 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-skeleton"></div>
+        <div className="h-32 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-skeleton"></div>
+        <div className="h-32 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-skeleton"></div>
+        <div className="h-32 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-skeleton"></div>
+        <div className="col-span-1 lg:col-span-4 h-64 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-skeleton"></div>
+      </div>
+    );
+  }
 
-  const faturamentoTotal = pedidos
-    .filter(p => p.status === 'Concluido')
-    .reduce((acc, p) => acc + Number(p.valor_total || 0), 0);
+  // Extrai ano e mês locais sem sofrer deslocamento de fuso horário UTC
+  const extrairAnoMesLocal = (dataStr) => {
+    if (!dataStr) return null;
+    const parteData = String(dataStr).split('T')[0];
+    const [ano, mes] = parteData.split('-').map(Number);
+    if (!ano || !mes) return null;
+    return { ano, mesIndex: mes - 1 };
+  };
 
-  const ticketMedio = concluidos > 0 ? faturamentoTotal / concluidos : 0;
+  let totalReceita = 0;
+  let maquinasVendidas = 0;
+  let emProducao = 0;
+  let aFazer = 0;
+  let concluidos = 0;
+  let revisao = 0;
+  let descartados = 0;
+  let faturamentoConcluido = 0;
+
+  const anosDisponiveis = new Set([new Date().getFullYear(), new Date().getFullYear() + 1]);
+
+  pedidos.forEach((p) => {
+    maquinasVendidas += Number(p.quantidade) || 0;
+
+    if (p.status === 'Em Producao') emProducao++;
+    else if (p.status === 'Pendente') aFazer++;
+    else if (p.status === 'Revisao') revisao++;
+    else if (p.status === 'Cancelado') descartados++;
+    else if (p.status === 'Concluido') {
+      concluidos++;
+      faturamentoConcluido += Number(p.valor_total) || 0;
+    }
+
+    if (p.status !== 'Cancelado') {
+      totalReceita += Number(p.valor_total) || 0;
+      const baseData = extrairAnoMesLocal(p.vencimento_inicial || p.created_at);
+      if (baseData) {
+        anosDisponiveis.add(baseData.ano);
+        const parcelas = p.condicao_pagamento === 'parcelado' ? (Number(p.num_parcelas) || 1) : 1;
+        const anoFinal = baseData.ano + Math.floor((baseData.mesIndex + parcelas - 1) / 12);
+        anosDisponiveis.add(anoFinal);
+      }
+    }
+  });
+
+  const ticketMedio = concluidos > 0 ? faturamentoConcluido / concluidos : 0;
+  const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+  // Monta a estrutura dos 12 meses conforme o filtro selecionado
+  const hoje = new Date();
+  const fluxoAnual = Array.from({ length: 12 }, (_, i) => {
+    if (periodoFiltro === 'proximos_12') {
+      const dataRef = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+      const anoCurto = String(dataRef.getFullYear()).slice(-2);
+      return {
+        mes: `${mesesNomes[dataRef.getMonth()]}/${anoCurto}`,
+        ano: dataRef.getFullYear(),
+        mesIndex: dataRef.getMonth(),
+        valor: 0
+      };
+    } else {
+      const anoSelecionado = Number(periodoFiltro);
+      return {
+        mes: mesesNomes[i],
+        ano: anoSelecionado,
+        mesIndex: i,
+        valor: 0
+      };
+    }
+  });
+
+  // Distribui entradas à vista e parcelas futuras ao longo dos 12 meses
+  pedidos.forEach((p) => {
+    if (p.status === 'Cancelado') return;
+
+    if (p.condicao_pagamento === 'parcelado' && p.vencimento_inicial) {
+      const inicio = extrairAnoMesLocal(p.vencimento_inicial);
+      if (!inicio) return;
+
+      const numParcelas = Number(p.num_parcelas) || 1;
+      const valorParcela = Number(p.valor_parcela) || (Number(p.valor_total || 0) / numParcelas);
+
+      for (let i = 0; i < numParcelas; i++) {
+        const totalMeses = inicio.mesIndex + i;
+        const anoParcela = inicio.ano + Math.floor(totalMeses / 12);
+        const mesParcela = totalMeses % 12;
+
+        const slot = fluxoAnual.find((f) => f.ano === anoParcela && f.mesIndex === mesParcela);
+        if (slot) {
+          slot.valor += valorParcela;
+        }
+      }
+    } else {
+      const dataVista = extrairAnoMesLocal(p.vencimento_inicial || p.created_at) || {
+        ano: hoje.getFullYear(),
+        mesIndex: hoje.getMonth()
+      };
+      const slot = fluxoAnual.find((f) => f.ano === dataVista.ano && f.mesIndex === dataVista.mesIndex);
+      if (slot) {
+        slot.valor += Number(p.valor_total || 0);
+      }
+    }
+  });
+
+  const maxValue = Math.max(...fluxoAnual.map((f) => f.valor), 1);
+  const totalPeriodoAnual = fluxoAnual.reduce((acc, item) => acc + item.valor, 0);
+  const projecao = fluxoAnual.map((f) => ({ ...f, height: (f.valor / maxValue) * 100 }));
+
+  const formatarMoeda = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const totalPedidos = aFazer + emProducao + revisao + concluidos + descartados;
 
   const dadosStatus = [
     { id: 'todo', label: 'A Fazer', value: aFazer, cor: '#71717a', bg: 'bg-zinc-500' },
@@ -97,47 +207,31 @@ function VisaoOperacional() {
     { id: 'done', label: 'Concluídos', value: concluidos, cor: '#10b981', bg: 'bg-emerald-500' },
     { id: 'discarded', label: 'Descartados', value: descartados, cor: '#ef4444', bg: 'bg-red-500' }
   ];
-
   let acumulado = 0;
 
-  const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const faturamentoPorMes = mesesNomes.map((mes, index) => {
-    const valorMes = pedidos
-      .filter(p => {
-        if (!p.created_at || p.status !== 'Concluido') return false;
-        const dataPedido = new Date(p.created_at);
-        return dataPedido.getMonth() === index;
-      })
-      .reduce((acc, p) => acc + Number(p.valor_total || 0), 0);
-    return { mes, valor: valorMes / 1000 };
-  });
-
-  const maxValor = Math.max(...faturamentoPorMes.map(m => m.valor), 10);
-  const formatarMoeda = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-slide-up duration-500">
       
-      {/* KPIs SUPERIORES (Padding reduzido de p-5 para p-4, margem mb-4) */}
+      {/* KPIs SUPERIORES */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div className="bg-white dark:bg-[#121214] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Faturamento Total</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{formatarMoeda(faturamentoTotal)}</h3></div>
+            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Receita Bruta Global</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{formatarMoeda(totalReceita)}</h3></div>
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 rounded-lg text-emerald-600 dark:text-emerald-500"><TrendingUp size={18} /></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#121214] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Ticket Médio</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{formatarMoeda(ticketMedio)}</h3></div>
+            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Ticket Médio (Concluídos)</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{formatarMoeda(ticketMedio)}</h3></div>
             <div className="p-2 bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-lg text-blue-600 dark:text-blue-500"><ClipboardList size={18} /></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#121214] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Em Produção</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{emProducao}</h3></div>
-            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300"><Settings size={18} /></div>
+            <div><p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Máquinas Encomendadas</p><h3 className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{maquinasVendidas}</h3></div>
+            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300"><Package size={18} /></div>
           </div>
         </div>
 
@@ -151,15 +245,15 @@ function VisaoOperacional() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
-        {/* Gráfico 1: Status (Padding reduzido, dimensões do gráfico reduzidas) */}
+        {/* Gráfico 1: Status */}
         <div className="bg-white dark:bg-[#121214] p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm lg:col-span-1 flex flex-col items-center">
           <div className="w-full mb-6">
             <h4 className="text-zinc-900 dark:text-zinc-100 font-medium text-sm">Status dos Pedidos</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Proporção dos pedidos ativos na base</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Proporção dos pedidos na base de dados</p>
           </div>
           
           <div className="relative w-36 h-36 flex items-center justify-center mb-6">
-            <svg viewBox="0 0 40 40" className="w-full h-full -rotate-90 drop-shadow-sm">
+            <svg viewBox="-2 -2 44 44" className="w-full h-full -rotate-90 drop-shadow-sm overflow-visible">
               {totalPedidos === 0 ? (
                 <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#27272a" strokeWidth="8" />
               ) : (
@@ -185,8 +279,6 @@ function VisaoOperacional() {
                       onMouseEnter={() => setHoveredStatus(item)}
                       onMouseLeave={() => setHoveredStatus(null)}
                       tabIndex="0"
-                      onFocus={() => setHoveredStatus(item)}
-                      onBlur={() => setHoveredStatus(null)}
                     />
                   );
                 })
@@ -225,29 +317,42 @@ function VisaoOperacional() {
           </div>
         </div>
         
-        {/* Gráfico 2: Faturamento (Altura reduzida de h-56 para h-44) */}
+        {/* Gráfico 2: Projeção Anual de Fluxo de Caixa (12 Meses) */}
         <div className="bg-white dark:bg-[#121214] p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm lg:col-span-2 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
             <div>
-              <h4 className="text-zinc-900 dark:text-zinc-100 font-medium text-sm">Histórico de Faturamento</h4>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Receita gerada por mês (em milhares de Reais)</p>
+              <h4 className="text-zinc-900 dark:text-zinc-100 font-medium text-sm flex items-center gap-2">
+                <DollarSign size={16} className="text-blue-500" /> Projeção Anual de Receita (12 Meses)
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Entradas à vista e cronograma mensal de parcelas — Total no período: <strong className="text-zinc-800 dark:text-zinc-200">{formatarMoeda(totalPeriodoAnual)}</strong>
+              </p>
             </div>
-            <select className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-300 text-xs rounded-md px-2 py-1 outline-none focus:border-blue-500"><option>2026</option></select>
+            <select 
+              value={periodoFiltro}
+              onChange={(e) => setPeriodoFiltro(e.target.value)}
+              className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-300 text-xs rounded-md px-2.5 py-1.5 outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="proximos_12">Próximos 12 Meses</option>
+              {[...anosDisponiveis].sort().map((ano) => (
+                <option key={ano} value={String(ano)}>Ano {ano} (Jan–Dez)</option>
+              ))}
+            </select>
           </div>
-          <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 h-44 px-1 border-b border-zinc-200 dark:border-zinc-800/50 pb-2 mt-2">
-            {faturamentoPorMes.map((item, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 h-full group">
-                <div 
-                  className={`w-full max-w-[2.5rem] rounded-t-md transition-all duration-500 relative flex justify-center ${item.valor === 0 ? 'bg-zinc-200 dark:bg-zinc-800/40' : 'bg-emerald-600/70 dark:bg-emerald-900/60 group-hover:bg-emerald-600'}`} 
-                  style={{ height: `${item.valor === 0 ? 4 : Math.max((item.valor / maxValor) * 100, 6)}%` }}
-                >
-                  {item.valor > 0 && (
-                    <span className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-zinc-800 text-white text-xs px-2 py-1 rounded transition-opacity z-10 whitespace-nowrap shadow">
-                      R$ {item.valor.toFixed(1)}k
-                    </span>
-                  )}
+
+          <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 h-52 px-1 border-b border-zinc-200 dark:border-zinc-800/50 pb-2 mt-4">
+            {projecao.map((item, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 h-full group min-w-0">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-medium bg-zinc-900 dark:bg-zinc-800 text-white px-2 py-1 rounded shadow-md z-10 whitespace-nowrap mb-1 pointer-events-none">
+                  {formatarMoeda(item.valor)}
                 </div>
-                <span className="text-[10px] text-zinc-500 uppercase">{item.mes}</span>
+                <div 
+                  className={`w-full max-w-[2.25rem] rounded-t-md transition-all duration-500 relative flex justify-center ${item.valor === 0 ? 'bg-zinc-200 dark:bg-zinc-800/40' : 'bg-blue-500/80 dark:bg-blue-600/70 group-hover:bg-blue-600 dark:group-hover:bg-blue-500'}`} 
+                  style={{ height: `${item.valor === 0 ? 4 : Math.max(item.height, 8)}%` }}
+                />
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-medium truncate max-w-full">
+                  {item.mes}
+                </span>
               </div>
             ))}
           </div>
@@ -294,7 +399,7 @@ function Historico() {
   const exportarPDF = () => { /* lógica de exportação */ };
 
   return (
-    <div className="animate-in fade-in duration-500 flex-1 flex flex-col">
+    <div className="animate-slide-up duration-500 flex-1 flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-[#121214] p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-4">
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Registo Geral Supabase</label>
@@ -393,7 +498,7 @@ function AbaClientes() {
   }, []);
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-slide-up duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="bg-white dark:bg-[#121214] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-4">
           <div className="p-2.5 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-500 rounded-full"><Users size={20}/></div>
@@ -413,13 +518,16 @@ function AbaClientes() {
         <h4 className="text-zinc-900 dark:text-zinc-100 font-medium text-sm mb-3">Lista de Clientes Registados</h4>
         
         {loading ? (
-          <p className="text-sm text-zinc-500">A carregar clientes...</p>
+          <div className="flex flex-col gap-3">
+            <div className="h-16 bg-zinc-200 dark:bg-zinc-800 rounded-lg animate-skeleton"></div>
+            <div className="h-16 bg-zinc-200 dark:bg-zinc-800 rounded-lg animate-skeleton"></div>
+          </div>
         ) : clientes.length === 0 ? (
           <p className="text-sm text-zinc-500">Nenhum cliente encontrado.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {clientes.map((cliente, index) => (
-              <div key={cliente.id || index} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#18181b] rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <div key={cliente.id || index} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#18181b] rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold w-6 text-blue-600 dark:text-blue-500">{index + 1}º</span>

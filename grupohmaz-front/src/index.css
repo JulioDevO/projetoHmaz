@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Scrollbar Customizada */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -26,6 +27,7 @@
   background-color: #52525b;
 }
 
+/* Esconde as setas nativas do input type="number" */
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -35,4 +37,52 @@ input[type='number']::-webkit-inner-spin-button {
 input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+/* Microinterações e Animações Funcionais */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-color: #e4e4e7;
+  }
+  50% {
+    background-color: #f4f4f5;
+  }
+  100% {
+    background-color: #e4e4e7;
+  }
+}
+
+@keyframes skeleton-loading-dark {
+  0% {
+    background-color: #27272a;
+  }
+  50% {
+    background-color: #3f3f46;
+  }
+  100% {
+    background-color: #27272a;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-loading 1.5s infinite ease-in-out;
+}
+
+.dark .animate-skeleton {
+  animation: skeleton-loading-dark 1.5s infinite ease-in-out;
 }

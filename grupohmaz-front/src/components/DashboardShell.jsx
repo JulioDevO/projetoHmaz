@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; 
 import { 
-  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut, ChevronLeft, Menu, User, MessageSquare, X
+  LayoutDashboard, Kanban, Users, Settings, Wrench, LogOut, ChevronLeft, Menu, User, MessageSquare, X, Bell
 } from 'lucide-react';
+import WhatsNewModal from './WhatsNewModal'; 
 
 export default function DashboardShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Estados de controlo do menu
+  // Estados de controlo do menu e modais
   const [isCollapsed, setIsCollapsed] = useState(false); // Para Desktop
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Para Mobile
+  const [forceModal, setForceModal] = useState(false); // Para o Modal de Novidades
 
   const handleLogout = async () => {
     await logout();
@@ -202,12 +204,25 @@ export default function DashboardShell() {
         </div>
       </aside>
 
-      {/* Conteúdo Principal */}
+      {/* Conteúdo Principal Com Botão de Novidades Desktop */}
       <main className="flex-1 flex flex-col bg-zinc-50 dark:bg-[#0a0a0a] transition-colors duration-300 min-w-0 z-10 relative">
+        <header className="hidden md:flex h-16 bg-white dark:bg-[#121214] border-b border-zinc-200 dark:border-zinc-800 px-6 items-center justify-end">
+           <button 
+             onClick={() => setForceModal(true)} 
+             className="relative p-2 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-all active:scale-95"
+             title="Novidades do Sistema"
+           >
+             <Bell size={20} />
+             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full border border-white dark:border-zinc-900"></span>
+           </button>
+        </header>
+
         <div className="p-6 md:p-8 flex-1 overflow-auto custom-scrollbar">
           <Outlet />
         </div>
       </main>
+
+      <WhatsNewModal forceOpen={forceModal} onClose={() => setForceModal(false)} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MonitorPlay, MoreHorizontal, Package, Calendar, AlertCircle, GripVertical, Minimize2, Link2, Check, Edit2 } from 'lucide-react';
+import { Plus, MonitorPlay, MoreHorizontal, Package, Calendar, GripVertical, Minimize2, Link2, Check, Edit2 } from 'lucide-react';
 import OrderDrawer from '../components/OrderDrawer';
 import { supabase } from '../supabaseClient';
 
@@ -14,11 +14,11 @@ const colunasIniciais = [
 export default function Pedidos() {
   const [colunas, setColunas] = useState(colunasIniciais);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [pedidoEditando, setPedidoEditando] = useState(null); 
-  
+  const [pedidoEditando, setPedidoEditando] = useState(null);
+
   const [dragInfo, setDragInfo] = useState(null);
   const [dropTarget, setDropTarget] = useState({ colId: null, index: null });
-  
+
   const [modoTV, setModoTV] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
@@ -42,7 +42,11 @@ export default function Pedidos() {
         prazo: new Date(p.created_at).toLocaleDateString('pt-BR'),
         dias: '',
         statusOriginal: p.status || 'Pendente',
-        observacao: p.observacao || ''
+        observacao: p.observacao || '',
+        condicao_pagamento: p.condicao_pagamento || 'a_vista',
+        num_parcelas: Number(p.num_parcelas) || 1,
+        valor_parcela: Number(p.valor_parcela) || 0,
+        vencimento_inicial: p.vencimento_inicial || ''
       }));
 
       setColunas(colunasIniciais.map((coluna) => ({
@@ -96,7 +100,7 @@ export default function Pedidos() {
 
       colOrigem.pedidos.splice(sourceIndex, 1);
       if (sourceColId === targetColId && sourceIndex < targetIndex) targetIndex -= 1;
-      
+
       colDestino.pedidos.splice(targetIndex, 0, { ...pedido, statusOriginal: targetColId });
       return novasColunas;
     });
@@ -143,7 +147,7 @@ export default function Pedidos() {
             {modoTV ? <Minimize2 size={15} /> : <MonitorPlay size={15} />} <span className="hidden sm:inline">{modoTV ? 'Sair do Modo TV' : 'Modo TV'}</span>
           </button>
           {!modoTV && (
-            <button onClick={() => setIsDrawerOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm">
+            <button onClick={() => { setPedidoEditando(null); setIsDrawerOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 shadow-sm">
               <Plus size={16} /> Novo Pedido
             </button>
           )}
@@ -177,7 +181,7 @@ export default function Pedidos() {
                 return (
                   <div key={pedido.id} className="flex flex-col">
                     {showIndicatorTop && <div className="h-1 bg-blue-500 rounded-full mb-2 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />}
-                    <div draggable onDragStart={(e) => handleDragStart(e, pedido, coluna.id, index)} onDragOver={(e) => handleDragOverCard(e, coluna.id, index)} onDragEnd={handleDragEnd} className={`bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/90 p-3.5 rounded-lg cursor-grab active:cursor-grabbing hover:border-zinc-400 dark:hover:border-zinc-600 shadow-sm group ${isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed' : ''}`}>
+                    <div draggable onDragStart={(e) => handleDragStart(e, pedido, coluna.id, index)} onDragOver={(e) => handleDragOverCard(e, coluna.id, index)} onDragEnd={handleDragEnd} className={`bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/90 p-3.5 rounded-lg cursor-grab active:cursor-grabbing hover:border-zinc-400 dark:hover:border-zinc-600 shadow-sm group transition-all ${isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed' : ''}`}>
                       
                       <div className="flex justify-between items-start gap-2 mb-1.5">
                         <div className="flex items-start gap-1.5 min-w-0">
@@ -194,6 +198,7 @@ export default function Pedidos() {
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => { e.stopPropagation(); setPedidoEditando(pedido); setIsDrawerOpen(true); }}
                             className="text-zinc-400 hover:text-blue-500 dark:text-zinc-500 dark:hover:text-blue-400 p-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-500/10 cursor-pointer relative z-10"
+                            title="Editar pedido"
                           >
                             <Edit2 size={13} />
                           </button>
@@ -201,12 +206,24 @@ export default function Pedidos() {
                       </div>
 
                       <p className="text-xs text-zinc-600 dark:text-zinc-300 mb-3 pl-5 line-clamp-1">{pedido.maquina}</p>
-                      <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mb-3 pl-5">
+                      <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mb-3 pl-5">
                         <span className="flex items-center gap-1"><Package size={13} /> {pedido.qtd} un.</span>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400/90">{pedido.valor}</span>
+                        <div className="text-right">
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400/90 block">{pedido.valor}</span>
+                          {pedido.condicao_pagamento === 'parcelado' && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                              {pedido.num_parcelas}x de {pedido.valor_parcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex justify-between items-center text-[11px] border-t border-zinc-200 dark:border-zinc-800/80 pt-2.5 text-zinc-500 dark:text-zinc-400">
                         <span className="flex items-center gap-1"><Calendar size={12} /> {pedido.prazo}</span>
+                        {pedido.condicao_pagamento === 'parcelado' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50">
+                            Parcelado
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
